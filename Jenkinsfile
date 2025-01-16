@@ -36,82 +36,74 @@ pipeline {
             }
             steps {
                 script {
-                    def setupSteps = [
-                        'Check Node version': 'node -v',
-                        'Check npm version': 'npm -v',
-                        'Check current user': 'whoami',
-                        'Check current directory': 'pwd',
-                        'List global packages': 'npm list -g --depth=0',
-                        'Uninstall old Appium': '''
+                    try {
+                        // Önce mevcut kurulumları temizle
+                        sh '''
+                            echo "Mevcut kurulumları temizleme..."
                             npm uninstall -g appium || true
                             npm uninstall -g appium-doctor || true
-                            npm cache clean --force
-                        ''',
-                        'Install Appium': 'npm install -g appium@2.4.1',
-                        'Check Appium version': 'appium -v',
-                        'Check Appium path': 'which appium',
-                        'List current drivers': 'appium driver list || true'
-                    ]
+                            rm -rf ~/.appium || true
+                            rm -rf ~/.npm/_cacache || true
+                            npm cache clean -f
+                        '''
 
-                    try {
-                        // Execute initial setup steps
-                        setupSteps.each { stepName, command ->
-                            echo "Executing: ${stepName}"
-                            def result = sh(script: command, returnStatus: true)
-                            if (result != 0) {
-                                error "Failed at step '${stepName}' with exit code ${result}"
-                            }
-                            echo "${stepName} completed successfully"
+                        // Node ve npm versiyonlarını kontrol et
+                        sh '''
+                            echo "Node ve npm versiyonları:"
+                            node -v
+                            npm -v
+                        '''
+
+                        // Appium'u kur
+                        sh '''
+                            echo "Appium kurulumu yapılıyor..."
+                            npm install -g appium@2.5.4
+                            appium -v
+                        '''
+
+                        if (params.PLATFORM == 'Android') {
+                            // Android için uiautomator2 sürücüsünü kur
+                            sh '''
+                                echo "uiautomator2 sürücüsü kuruluyor..."
+                                appium driver uninstall uiautomator2 || true
+                                appium driver install uiautomator2@3.9.8
+                                echo "Kurulu sürücüler:"
+                                appium driver list
+                            '''
+                        } else if (params.PLATFORM == 'iOS') {
+                            // iOS için xcuitest sürücüsünü kur
+                            sh '''
+                                echo "xcuitest sürücüsü kuruluyor..."
+                                appium driver uninstall xcuitest || true
+                                appium driver install xcuitest
+                                echo "Kurulu sürücüler:"
+                                appium driver list
+                            '''
                         }
 
-                        // Special handling for uiautomator2 installation
-                        echo "Installing uiautomator2 driver with debug logging..."
-                        def uiautomator2Result = sh(script: '''
-                            export DEBUG=appium*
-                            echo "Current PATH: $PATH"
-                            echo "Appium location: $(which appium)"
-                            echo "Installing uiautomator2 driver..."
-                            appium driver install uiautomator2@3.9.8 --source=npm
-                        ''', returnStatus: true)
-
-                        if (uiautomator2Result != 0) {
-                            error "Failed to install uiautomator2 driver. Exit code: ${uiautomator2Result}"
-                        }
-
-                        // Install xcuitest driver if needed
-                        if (params.PLATFORM == 'iOS') {
-                            echo "Installing xcuitest driver..."
-                            def xcuitestResult = sh(script: 'appium driver install xcuitest --source=npm', returnStatus: true)
-                            if (xcuitestResult != 0) {
-                                error "Failed to install xcuitest driver. Exit code: ${xcuitestResult}"
-                            }
-                        }
-
-                        // Verify installations
-                        echo "Verifying driver installations..."
-                        sh 'appium driver list'
+                        // Kurulum sonrası kontrol
+                        sh '''
+                            echo "Kurulum sonrası durum:"
+                            echo "Appium versiyonu:"
+                            appium -v
+                            echo "Kurulu sürücüler:"
+                            appium driver list
+                        '''
                         
                     } catch (Exception e) {
                         echo """
-                        ❌ Setup Environment Failed
-                        Error: ${e.message}
+                        ❌ Kurulum Hatası
+                        Hata: ${e.message}
                         
-                        Debugging Information:
-                        Node Version: ${sh(script: 'node -v || echo "Not installed"', returnStdout: true).trim()}
-                        NPM Version: ${sh(script: 'npm -v || echo "Not installed"', returnStdout: true).trim()}
-                        User: ${sh(script: 'whoami', returnStdout: true).trim()}
-                        Directory: ${sh(script: 'pwd', returnStdout: true).trim()}
-                        Appium Path: ${sh(script: 'which appium || echo "Not found"', returnStdout: true).trim()}
-                        
-                        Global NPM packages:
-                        ${sh(script: 'npm list -g --depth=0 || echo "Failed to list packages"', returnStdout: true).trim()}
-                        
-                        Appium Drivers:
-                        ${sh(script: 'appium driver list || echo "Failed to list drivers"', returnStdout: true).trim()}
+                        Sistem Bilgileri:
+                        Node: ${sh(script: 'node -v || echo "Kurulu değil"', returnStdout: true).trim()}
+                        NPM: ${sh(script: 'npm -v || echo "Kurulu değil"', returnStdout: true).trim()}
+                        Kullanıcı: ${sh(script: 'whoami', returnStdout: true).trim()}
+                        Dizin: ${sh(script: 'pwd', returnStdout: true).trim()}
                         """
                         
                         currentBuild.result = 'FAILURE'
-                        error "Setup Environment stage failed: ${e.message}"
+                        error "Kurulum başarısız: ${e.message}"
                     }
                 }
             }
