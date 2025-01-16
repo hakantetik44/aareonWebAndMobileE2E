@@ -2,15 +2,16 @@
 
 <img src="https://storage.googleapis.com/bkt-ph-prod-homepage-media-public/original_images/aareon-logo.png" width="400px">
 
-# 🏢 Tests E2E Les Residences
+# 🏢 Tests E2E Web & Mobile Les Residences
 
-[![Tests](https://img.shields.io/badge/Tests-Passing-success?style=for-the-badge&logo=github)](https://github.com/AareonFrance/aareonWebAndMobileE2E)
+[![Tests](https://img.shields.io/badge/Tests-Passing-success?style=for-the-badge&logo=github)](https://github.com/hakantetik44/aareonWebAndMobileE2E)
+[![Selenium](https://img.shields.io/badge/Selenium-4.0-green?style=for-the-badge&logo=selenium)](https://www.selenium.dev)
 [![Appium](https://img.shields.io/badge/Appium-2.0-purple?style=for-the-badge&logo=appium)](https://appium.io)
 [![Cucumber](https://img.shields.io/badge/Cucumber-BDD-brightgreen?style=for-the-badge&logo=cucumber)](https://cucumber.io)
 [![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java)](https://www.java.com)
 [![Maven](https://img.shields.io/badge/Maven-3.8-red?style=for-the-badge&logo=apache-maven)](https://maven.apache.org)
 
-*Framework de tests automatisés pour l'application mobile Les Residences*
+*Framework de tests automatisés pour l'application web et mobile Les Residences*
 
 [📱 Documentation](#-à-propos) •
 [🚀 Installation](#-installation) •
@@ -22,29 +23,42 @@
 </div>
 
 ## 💫 À propos
-Framework de tests end-to-end pour l'application mobile "Les Residences" d'Aareon France. Cette suite de tests automatisés permet de valider le bon fonctionnement de l'application sur les plateformes Android et iOS.
+Framework de tests end-to-end pour l'application "Les Residences" d'Aareon France. Cette suite de tests automatisés permet de valider le bon fonctionnement de :
+- 🌐 L'application web responsive
+- 📱 L'application mobile Android et iOS
+- 🔄 La synchronisation des données entre les plateformes
 
 ## ⚡ Technologies Utilisées
-- 📱 **Appium** : Framework de test mobile multi-plateforme
-- 🥒 **Cucumber** : Outil BDD pour les spécifications exécutables
-- ☕ **Java** : Langage de programmation principal
-- 🎯 **Maven** : Gestionnaire de dépendances et de build
-- 🧪 **JUnit** : Framework de test unitaire
-- 📊 **Allure** : Génération de rapports de test élégants
+- 🌐 **Selenium** : Tests automatisés web
+- 📱 **Appium** : Tests automatisés mobile
+- 🥒 **Cucumber** : Spécifications BDD
+- ☕ **Java** : Langage de programmation
+- 🎯 **Maven** : Gestion des dépendances
+- 🧪 **JUnit** : Framework de test
+- 📊 **Allure** : Rapports de test
 
 ## 📋 Prérequis
-- ☕ Java JDK 11 ou supérieur
-- 🎯 Maven 3.8.x ou supérieur
-- 💻 Node.js et npm (pour Appium)
-- 📱 Appium Server 2.0 ou supérieur
-- 🤖 Android Studio avec SDK (pour les tests Android)
-- 🍎 Xcode (pour les tests iOS, macOS uniquement)
+
+### 🌐 Tests Web
+- ☕ Java JDK 11+
+- 🎯 Maven 3.8.x+
+- 🌐 Navigateurs :
+  - Chrome
+  - Firefox
+  - Safari
+  - Edge
+
+### 📱 Tests Mobile
+- 💻 Node.js et npm
+- 📱 Appium 2.0+
+- 🤖 Android Studio & SDK
+- 🍎 Xcode (pour iOS)
 
 ## 🚀 Installation
 
 ### 1. 📥 Cloner le repository
 ```bash
-git clone https://github.com/AareonFrance/aareonWebAndMobileE2E.git
+git clone https://github.com/hakantetik44/aareonWebAndMobileE2E.git
 cd aareonWebAndMobileE2E
 ```
 
@@ -53,22 +67,25 @@ cd aareonWebAndMobileE2E
 mvn clean install
 ```
 
-### 3. ⚙️ Configurer l'environnement
-- Copier `configuration.properties.example` vers `configuration.properties`
-- Modifier les paramètres selon votre environnement
+### 3. ⚙️ Configuration
 
-## 📱 Configuration des Appareils
+#### 🌐 Web
+```properties
+webUrl=https://lesresidences-et-moi.com
+browser=chrome
+```
 
-### 🤖 Android
-- Émulateur Android ou appareil physique connecté
-- API Level 29+ recommandé
-- USB Debugging activé (pour les appareils physiques)
+#### 📱 Mobile
+```properties
+# Android
+androidAppPackage=fr.aareon.lesresidences.bis
+androidAppActivity=fr.aareon.lesresidences.bis.MainActivity
+deviceName=emulator-5554
 
-### 🍎 iOS
-- Simulateur iOS ou appareil physique
-- iOS 14+ recommandé
-- XCode 12+ installé
-- Certificats de développement configurés
+# iOS
+iosBundleId=fr.aareon.lesresidences.bis
+iosDeviceName=iPhone 14
+```
 
 ## ▶️ Exécution des Tests
 
@@ -77,34 +94,50 @@ mvn clean install
 mvn clean test
 ```
 
-### 🏷️ Tests spécifiques par tag
+### 🌐 Tests Web uniquement
 ```bash
-mvn test -Dcucumber.filter.tags="@login"
+mvn test -Dplatform=web
 ```
 
-### 📱 Tests par plateforme
+### 📱 Tests Mobile par plateforme
 ```bash
-# Android uniquement
-mvn test -DplatformName=Android
+# Android
+mvn test -Dplatform=android
 
-# iOS uniquement
-mvn test -DplatformName=iOS
+# iOS
+mvn test -Dplatform=ios
+```
+
+### 🏷️ Tests par fonctionnalité
+```bash
+mvn test -Dcucumber.filter.tags="@login or @registration"
 ```
 
 ## 📊 Rapports
-Les rapports de test sont générés automatiquement après chaque exécution :
+Les rapports détaillés sont générés pour chaque plateforme :
 - 📈 **Allure** : `target/allure-results`
+  - Vue d'ensemble des tests
+  - Screenshots des erreurs
+  - Temps d'exécution
+  - Métriques de qualité
 - 📑 **Cucumber** : `target/cucumber-reports`
+  - Rapports HTML
+  - Rapports JSON
+  - Rapports XML
 
-Pour visualiser le rapport Allure :
+Pour visualiser les rapports :
 ```bash
+# Allure
 allure serve target/allure-results
+
+# Cucumber (ouvre le rapport HTML)
+open target/cucumber-reports/index.html
 ```
 
 ## 🌍 UTM Tracking
 - 🏢 **Source** : aareon_france
 - 💻 **Medium** : github
-- 📱 **Campaign** : mobile_testing
+- 📱 **Campaign** : web_mobile_testing
 - 🔄 **Content** : e2e_framework
 
 ## 🤝 Contribution
@@ -130,7 +163,7 @@ Copyright © 2025 [Aareon France](https://www.aareon.fr/). Tous droits réservé
 
 *Développé avec ❤️ par l'équipe QA d'Aareon France*
 
-[![GitHub stars](https://img.shields.io/github/stars/AareonFrance/aareonWebAndMobileE2E?style=social)](https://github.com/AareonFrance/aareonWebAndMobileE2E/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/hakantetik44/aareonWebAndMobileE2E?style=social)](https://github.com/hakantetik44/aareonWebAndMobileE2E/stargazers)
 [![Twitter Follow](https://img.shields.io/twitter/follow/AareonFrance?style=social)](https://twitter.com/AareonFrance)
 
 </div>
