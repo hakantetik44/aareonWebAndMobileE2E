@@ -42,8 +42,12 @@ pipeline {
                         'Check current user': 'whoami',
                         'Check current directory': 'pwd',
                         'List global packages': 'npm list -g --depth=0',
-                        'Uninstall old Appium': 'npm uninstall -g appium || true',
-                        'Install Appium': 'npm install -g appium@2.0.0',
+                        'Uninstall old Appium': '''
+                            npm uninstall -g appium || true
+                            npm uninstall -g appium-doctor || true
+                            npm cache clean --force
+                        ''',
+                        'Install Appium': 'npm install -g appium@2.4.1',
                         'Check Appium version': 'appium -v',
                         'Check Appium path': 'which appium',
                         'List current drivers': 'appium driver list || true'
@@ -67,7 +71,7 @@ pipeline {
                             echo "Current PATH: $PATH"
                             echo "Appium location: $(which appium)"
                             echo "Installing uiautomator2 driver..."
-                            appium driver install uiautomator2 --source=npm
+                            appium driver install uiautomator2@3.9.8 --source=npm
                         ''', returnStatus: true)
 
                         if (uiautomator2Result != 0) {
