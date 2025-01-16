@@ -203,9 +203,14 @@ pipeline {
                 
                 // Eski Allure raporlarını temizle
                 sh '''
+                    # Workspace'deki raporları temizle
                     rm -rf allure-report || true
                     rm -rf allure-results || true
                     rm -f allure-report.zip || true
+                    
+                    # Jenkins build dizinindeki raporları temizle
+                    rm -rf ${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/archive/allure-report.zip || true
+                    rm -rf ${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/allure-report || true
                 '''
                 
                 // Allure raporu oluştur
