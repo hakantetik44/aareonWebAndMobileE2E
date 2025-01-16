@@ -39,38 +39,43 @@ pipeline {
                     try {
                         // Node.js ve npm versiyonlarını kontrol et
                         sh '''
-                            echo "Node version:"
-                            node -v
-                            echo "NPM version:"
-                            npm -v
-                        '''
-                        
-                        // Mevcut Appium kurulumlarını temizle
-                        sh '''
+                            set -x  # Enable command echo
+                            echo "Node version check:"
+                            node -v || echo "Node.js is not installed or not in PATH"
+                            
+                            echo "NPM version check:"
+                            npm -v || echo "npm is not installed or not in PATH"
+                            
+                            echo "Current user and permissions:"
+                            whoami
+                            echo "Current directory:"
+                            pwd
+                            
                             echo "Removing existing Appium installations..."
+                            npm list -g appium || true
                             npm uninstall -g appium || true
                             npm uninstall -g appium-inspector || true
                             npm uninstall -g appium-xcuitest-driver || true
-                        '''
-                        
-                        // Appium ve gerekli driver'ları kur
-                        sh '''
-                            echo "Installing Appium and drivers..."
-                            npm install -g appium@2.0.0
-                            echo "Appium version:"
-                            appium -v
+                            
+                            echo "Installing Appium..."
+                            npm install -g appium@2.0.0 || { echo "Failed to install Appium"; exit 1; }
+                            
+                            echo "Verifying Appium installation..."
+                            appium -v || { echo "Appium installation verification failed"; exit 1; }
                             
                             echo "Installing Appium drivers..."
-                            appium driver install uiautomator2
-                            appium driver install xcuitest
+                            appium driver list || true
+                            appium driver install uiautomator2 || { echo "Failed to install uiautomator2 driver"; exit 1; }
+                            appium driver install xcuitest || { echo "Failed to install xcuitest driver"; exit 1; }
                             
-                            echo "Listing installed drivers:"
+                            echo "Verifying installed drivers:"
                             appium driver list
                         '''
                     } catch (Exception e) {
-                        echo "Setup Environment stage failed: ${e.message}"
+                        echo "Setup Environment stage failed with error: ${e.message}"
+                        sh 'npm list -g || true'  // List global packages
                         currentBuild.result = 'FAILURE'
-                        throw e
+                        error "Setup Environment stage failed: ${e.message}"
                     }
                 }
             }
