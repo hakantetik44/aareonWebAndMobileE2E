@@ -120,10 +120,14 @@ pipeline {
                     try {
                         sh """
                             echo "Starting test execution..."
-                            mvn clean test \
+                            mvn clean test -Dcucumber.filter.tags="@smoke" \
                             -DplatformName=${params.PLATFORM} \
                             -Dappium.server.url=http://localhost:4723 \
-                            -Dmaven.test.failure.ignore=true
+                            -Dmaven.test.failure.ignore=true \
+                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json" \
+                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber.html" \
+                            -Dcucumber.plugin="pretty" \
+                            -Dcucumber.plugin="io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
                         """
                     } catch (Exception e) {
                         echo "Test execution failed: ${e.message}"
