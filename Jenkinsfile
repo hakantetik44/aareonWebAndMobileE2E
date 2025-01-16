@@ -45,12 +45,12 @@ pipeline {
                         'Uninstall old Appium': 'npm uninstall -g appium || true',
                         'Install Appium': 'npm install -g appium@2.0.0',
                         'Check Appium version': 'appium -v',
-                        'Install uiautomator2': 'appium driver install uiautomator2',
-                        'Install xcuitest': 'appium driver install xcuitest',
-                        'List Appium drivers': 'appium driver list'
+                        'Check Appium path': 'which appium',
+                        'List current drivers': 'appium driver list || true'
                     ]
 
                     try {
+                        // Execute initial setup steps
                         setupSteps.each { stepName, command ->
                             echo "Executing: ${stepName}"
                             def result = sh(script: command, returnStatus: true)
@@ -59,6 +59,34 @@ pipeline {
                             }
                             echo "${stepName} completed successfully"
                         }
+
+                        // Special handling for uiautomator2 installation
+                        echo "Installing uiautomator2 driver with debug logging..."
+                        def uiautomator2Result = sh(script: '''
+                            export DEBUG=appium*
+                            echo "Current PATH: $PATH"
+                            echo "Appium location: $(which appium)"
+                            echo "Installing uiautomator2 driver..."
+                            appium driver install uiautomator2 --source=npm
+                        ''', returnStatus: true)
+
+                        if (uiautomator2Result != 0) {
+                            error "Failed to install uiautomator2 driver. Exit code: ${uiautomator2Result}"
+                        }
+
+                        // Install xcuitest driver if needed
+                        if (params.PLATFORM == 'iOS') {
+                            echo "Installing xcuitest driver..."
+                            def xcuitestResult = sh(script: 'appium driver install xcuitest --source=npm', returnStatus: true)
+                            if (xcuitestResult != 0) {
+                                error "Failed to install xcuitest driver. Exit code: ${xcuitestResult}"
+                            }
+                        }
+
+                        // Verify installations
+                        echo "Verifying driver installations..."
+                        sh 'appium driver list'
+                        
                     } catch (Exception e) {
                         echo """
                         ❌ Setup Environment Failed
@@ -69,9 +97,13 @@ pipeline {
                         NPM Version: ${sh(script: 'npm -v || echo "Not installed"', returnStdout: true).trim()}
                         User: ${sh(script: 'whoami', returnStdout: true).trim()}
                         Directory: ${sh(script: 'pwd', returnStdout: true).trim()}
+                        Appium Path: ${sh(script: 'which appium || echo "Not found"', returnStdout: true).trim()}
                         
                         Global NPM packages:
                         ${sh(script: 'npm list -g --depth=0 || echo "Failed to list packages"', returnStdout: true).trim()}
+                        
+                        Appium Drivers:
+                        ${sh(script: 'appium driver list || echo "Failed to list drivers"', returnStdout: true).trim()}
                         """
                         
                         currentBuild.result = 'FAILURE'
