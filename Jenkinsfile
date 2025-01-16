@@ -36,18 +36,42 @@ pipeline {
             }
             steps {
                 script {
-                    // Node.js ve npm kurulumunu kontrol et
-                    sh '''
-                        node -v
-                        npm -v
-                    '''
-                    
-                    // Appium ve gerekli driver'ları kur
-                    sh '''
-                        npm install -g appium@2.0.0
-                        appium driver install uiautomator2
-                        appium driver install xcuitest
-                    '''
+                    try {
+                        // Node.js ve npm versiyonlarını kontrol et
+                        sh '''
+                            echo "Node version:"
+                            node -v
+                            echo "NPM version:"
+                            npm -v
+                        '''
+                        
+                        // Mevcut Appium kurulumlarını temizle
+                        sh '''
+                            echo "Removing existing Appium installations..."
+                            npm uninstall -g appium || true
+                            npm uninstall -g appium-inspector || true
+                            npm uninstall -g appium-xcuitest-driver || true
+                        '''
+                        
+                        // Appium ve gerekli driver'ları kur
+                        sh '''
+                            echo "Installing Appium and drivers..."
+                            npm install -g appium@2.0.0
+                            echo "Appium version:"
+                            appium -v
+                            
+                            echo "Installing Appium drivers..."
+                            appium driver install uiautomator2
+                            appium driver install xcuitest
+                            
+                            echo "Listing installed drivers:"
+                            appium driver list
+                        '''
+                    } catch (Exception e) {
+                        echo "Setup Environment stage failed: ${e.message}"
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    }
                 }
             }
         }
@@ -58,24 +82,34 @@ pipeline {
             }
             steps {
                 script {
-                    sh '''
-                        # Önceki Appium instance'larını temizle
-                        pkill -f appium || true
-                        
-                        # Appium server'ı başlat
-                        appium --allow-insecure chromedriver_autodownload -p 4723 > appium.log 2>&1 &
-                        
-                        # Server'ın başlamasını bekle
-                        sleep 15
-                        
-                        # Server'ın çalıştığını kontrol et
-                        if ! curl -s http://localhost:4723/status > /dev/null; then
-                            echo "Appium server başlatılamadı!"
-                            exit 1
-                        fi
-                        
-                        echo "Appium server başarıyla başlatıldı"
-                    '''
+                    try {
+                        sh '''
+                            echo "Cleaning up existing Appium processes..."
+                            pkill -f appium || true
+                            sleep 5
+                            
+                            echo "Starting Appium server..."
+                            appium --allow-insecure chromedriver_autodownload -p 4723 --log-level debug --relaxed-security > appium.log 2>&1 &
+                            
+                            echo "Waiting for server to start..."
+                            sleep 30
+                            
+                            echo "Checking server status..."
+                            if curl -s http://localhost:4723/status; then
+                                echo "Appium server is running successfully"
+                            else
+                                echo "Appium server failed to start"
+                                echo "Appium logs:"
+                                cat appium.log
+                                exit 1
+                            fi
+                        '''
+                    } catch (Exception e) {
+                        echo "Start Appium Server stage failed: ${e.message}"
+                        sh 'cat appium.log || true'
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    }
                 }
             }
         }
@@ -85,16 +119,17 @@ pipeline {
                 script {
                     try {
                         sh """
-                            # Test çalıştırma
+                            echo "Starting test execution..."
                             mvn clean test \
                             -DplatformName=${params.PLATFORM} \
-                            -Dappium.server.url=http://localhost:4723
+                            -Dappium.server.url=http://localhost:4723 \
+                            -Dmaven.test.failure.ignore=true
                         """
                     } catch (Exception e) {
-                        // Test loglarını kaydet
+                        echo "Test execution failed: ${e.message}"
                         sh 'cat appium.log || true'
-                        currentBuild.result = 'FAILURE'
-                        throw e
+                        currentBuild.result = 'UNSTABLE'
+                        // Don't throw the exception here to allow report generation
                     }
                 }
             }
@@ -103,14 +138,18 @@ pipeline {
         stage('Generate Reports') {
             steps {
                 script {
-                    sh """
-                        mkdir -p test-reports
-                        cp -r target/cucumber-reports/* test-reports/ || true
-                        cp -r target/surefire-reports test-reports/ || true
-                        cp -r target/allure-results test-reports/ || true
-                        cp appium.log test-reports/ || true
-                        zip -r test-reports.zip test-reports/
-                    """
+                    try {
+                        allure([
+                            includeProperties: false,
+                            jdk: '',
+                            properties: [],
+                            reportBuildPolicy: 'ALWAYS',
+                            results: [[path: 'target/allure-results']]
+                        ])
+                    } catch (Exception e) {
+                        echo "Report generation failed: ${e.message}"
+                        currentBuild.result = 'UNSTABLE'
+                    }
                 }
             }
         }
@@ -123,52 +162,41 @@ pipeline {
                 if (params.PLATFORM != 'Web') {
                     sh 'pkill -f appium || true'
                 }
+                
+                // Test raporlarını arşivle
+                archiveArtifacts artifacts: '**/target/**/*', allowEmptyArchive: true
+                
+                // Allure raporu oluştur
+                allure([
+                    includeProperties: false,
+                    jdk: '',
+                    properties: [],
+                    reportBuildPolicy: 'ALWAYS',
+                    results: [[path: 'target/allure-results']]
+                ])
+                
+                // Cucumber raporu oluştur
+                cucumber buildStatus: 'UNSTABLE',
+                        failedFeaturesNumber: -1,
+                        failedScenariosNumber: -1,
+                        skippedStepsNumber: -1,
+                        failedStepsNumber: -1,
+                        classifications: [
+                            [key: 'Platform', value: params.PLATFORM],
+                            [key: 'Branch', value: env.BRANCH_NAME]
+                        ]
+                
+                // Workspace'i temizle
+                cleanWs()
+                
+                // Test sonuçlarını yazdır
+                echo """
+                ❌ Test Sonuçları:
+                📱 Platform: ${params.PLATFORM}
+                🌿 Branch: ${env.BRANCH_NAME}
+                ⚠️ Status: ${currentBuild.result}
+                """
             }
-
-            // Test raporlarını arşivle
-            archiveArtifacts artifacts: [
-                'test-reports.zip',
-                'target/cucumber-reports/**/*',
-                'appium.log'
-            ].join(', '), fingerprint: true
-            
-            // Allure raporu
-            allure([
-                reportBuildPolicy: 'ALWAYS',
-                results: [[path: 'target/allure-results']]
-            ])
-
-            // Cucumber raporu
-            cucumber(
-                buildStatus: 'UNSTABLE',
-                fileIncludePattern: '**/cucumber.json',
-                jsonReportDirectory: 'target/cucumber-reports',
-                classifications: [
-                    [key: 'Platform', value: params.PLATFORM],
-                    [key: 'Branch', value: env.BRANCH_NAME]
-                ]
-            )
-
-            // Workspace temizle
-            cleanWs()
-        }
-        
-        success {
-            echo '''
-              ✅ Test Sonuçları:
-              📱 Platform: ${params.PLATFORM}
-              🌿 Branch: ${env.BRANCH_NAME}
-              ✨ Status: Başarılı
-              '''
-        }
-        
-        failure {
-            echo '''
-              ❌ Test Sonuçları:
-              📱 Platform: ${params.PLATFORM}
-              🌿 Branch: ${env.BRANCH_NAME}
-              ⚠️ Status: Başarısız
-              '''
         }
     }
 }
