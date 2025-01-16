@@ -61,18 +61,11 @@ public class ResidenceSteps {
 
     @Then("la connexion doit échouer")
     public void laConnexionDoitEchouer() {
-        // Vérifier que nous sommes toujours sur la page de connexion
         try {
-            // Tenter de cliquer sur le bouton inscription pour vérifier qu'on est toujours sur la page de login
             residencePage.clickInscription();
             System.out.println("La connexion a échoué comme prévu");
         } catch (Exception e) {
             fail("La connexion semble avoir réussi alors qu'elle aurait dû échouer");
         }
-    }
-
-    @Given("l'application Les Residences est ouverte")
-    public void verifierApplicationOuverte() {
-        System.out.println("Vérification que l'application est ouverte...");
     }
 }

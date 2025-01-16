@@ -2,9 +2,15 @@ package pages;
 
 import io.appium.java_client.AppiumBy;
 import org.openqa.selenium.By;
+import org.openqa.selenium.ElementNotInteractableException;
+import org.openqa.selenium.StaleElementReferenceException;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import utils.OS;
 import static utils.Driver.getCurrentDriver;
+import java.time.Duration;
 import java.util.Map;
 
 public class ResidencePage extends BasePage {
@@ -26,14 +32,20 @@ public class ResidencePage extends BasePage {
                 AppiumBy.xpath("//android.widget.Button") :
                 AppiumBy.accessibilityId("loginButton");
 
-        System.out.println("Email giriliyor: " + email);
-        getCurrentDriver().findElement(emailInput).sendKeys(email);
+        System.out.println("Saisie de l'email: " + email);
+        WebElement emailField = findElement(emailInput);
+        emailField.click();
+        emailField.clear();
+        emailField.sendKeys(email);
         
-        System.out.println("Şifre giriliyor: " + password);
-        getCurrentDriver().findElement(passwordInput).sendKeys(password);
+        System.out.println("Saisie du mot de passe: " + password);
+        WebElement passwordField = findElement(passwordInput);
+        passwordField.click();
+        passwordField.clear();
+        passwordField.sendKeys(password);
         
-        System.out.println("Login butonuna tıklanıyor");
-        getCurrentDriver().findElement(loginButton).click();
+        System.out.println("Clic sur le bouton de connexion");
+        findElement(loginButton).click();
     }
 
     public boolean isErrorMessageDisplayed() {
@@ -113,20 +125,57 @@ public class ResidencePage extends BasePage {
                 AppiumBy.xpath("(//android.widget.EditText)[6]") :
                 AppiumBy.accessibilityId("confirmPasswordInput");
 
-        System.out.println("Numara giriliyor: " + userInfo.get("numContrat"));
-        getCurrentDriver().findElement(numContratInput).sendKeys(userInfo.get("numContrat"));
+        System.out.println("Saisie du numéro de contrat: " + userInfo.get("numContrat"));
+        WebElement contractField = findElement(numContratInput);
+        contractField.click();
+        contractField.clear();
+        contractField.sendKeys(userInfo.get("numContrat"));
         
-        System.out.println("İsim giriliyor: " + userInfo.get("nom"));
-        getCurrentDriver().findElement(nomInput).sendKeys(userInfo.get("nom"));
+        System.out.println("Saisie du nom: " + userInfo.get("nom"));
+        WebElement nameField = findElement(nomInput);
+        nameField.click();
+        nameField.clear();
+        nameField.sendKeys(userInfo.get("nom"));
         
-        System.out.println("Soyisim giriliyor: " + userInfo.get("prenom"));
-        getCurrentDriver().findElement(prenomInput).sendKeys(userInfo.get("prenom"));
+        System.out.println("Saisie du prénom: " + userInfo.get("prenom"));
+        WebElement firstNameField = findElement(prenomInput);
+        firstNameField.click();
+        firstNameField.clear();
+        firstNameField.sendKeys(userInfo.get("prenom"));
         
-        System.out.println("Email giriliyor: " + userInfo.get("email"));
-        getCurrentDriver().findElement(emailInput).sendKeys(userInfo.get("email"));
+        System.out.println("Saisie de l'email: " + userInfo.get("email"));
+        WebElement emailField = findElement(emailInput);
+        emailField.click();
+        emailField.clear();
+        emailField.sendKeys(userInfo.get("email"));
         
-        System.out.println("Şifre giriliyor: " + userInfo.get("password"));
-        getCurrentDriver().findElement(passwordInput).sendKeys(userInfo.get("password"));
-        getCurrentDriver().findElement(confirmPasswordInput).sendKeys(userInfo.get("password"));
+        System.out.println("Saisie du mot de passe: " + userInfo.get("password"));
+        WebElement passwordField = findElement(passwordInput);
+        passwordField.click();
+        passwordField.clear();
+        passwordField.sendKeys(userInfo.get("password"));
+        
+        WebElement confirmPasswordField = findElement(confirmPasswordInput);
+        confirmPasswordField.click();
+        confirmPasswordField.clear();
+        confirmPasswordField.sendKeys(userInfo.get("password"));
+    }
+
+    private WebElement findElement(By locator) {
+        int maxAttempts = 3;
+        int attempt = 0;
+        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(10));
+
+        while (attempt < maxAttempts) {
+            try {
+                return wait.until(ExpectedConditions.elementToBeClickable(locator));
+            } catch (StaleElementReferenceException e) {
+                attempt++;
+                if (attempt == maxAttempts) {
+                    throw e;
+                }
+            }
+        }
+        throw new ElementNotInteractableException("L'élément n'est pas devenu cliquable après " + maxAttempts + " tentatives");
     }
 } 

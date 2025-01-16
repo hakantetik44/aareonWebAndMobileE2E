@@ -20,16 +20,16 @@ public class Hooks {
         OS.OS = ConfigReader.getProperty("platformName", "Android");
     }
 
-    @Given("Les Residences uygulamasi acik durumda")
-    public void lesResidencesUygulamasiAcikDurumda() {
+    @Given("l'application Les Residences est ouverte")
+    public void verifierApplicationOuverte() {
         try {
-            System.out.println("Uygulama başlatılıyor...");
+            System.out.println("Démarrage de l'application...");
             if (OS.isAndroid()) {
                 Driver.Android = Driver.getAndroidDriver();
-                System.out.println("Android driver başarıyla oluşturuldu");
+                System.out.println("Driver Android créé avec succès");
             }
         } catch (Exception e) {
-            System.out.println("Driver başlatma hatası: " + e.getMessage());
+            System.out.println("Erreur lors du démarrage du driver: " + e.getMessage());
             e.printStackTrace();
             throw e;
         }
@@ -42,13 +42,13 @@ public class Hooks {
             if (driver != null && scenario.isFailed()) {
                 if (driver instanceof TakesScreenshot) {
                     byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-                    scenario.attach(screenshot, "image/png", "hata-ekran-goruntusu");
+                    scenario.attach(screenshot, "image/png", "capture-erreur");
                 }
             }
         } catch (Exception e) {
-            System.out.println("Teardown hatası: " + e.getMessage());
+            System.out.println("Erreur lors du teardown: " + e.getMessage());
         } finally {
             Driver.closeDriver();
         }
     }
-} 
+}
