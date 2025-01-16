@@ -168,13 +168,13 @@ pipeline {
                         '''
 
                         // Test komutu
-                        sh '''
+                        sh """
                             echo "🚀 Testler başlatılıyor..."
                             
                             # Maven debug modunda çalıştır
                             set -x
                             mvn clean test \
-                            -Dplatform=${params.PLATFORM} \
+                            -Dplatform="${params.PLATFORM}" \
                             -Dcucumber.options="--plugin json:target/cucumber-reports/cucumber.json --plugin pretty" \
                             -Dallure.results.directory=target/allure-results \
                             -Dmaven.test.failure.ignore=true \
@@ -187,7 +187,7 @@ pipeline {
                             
                             echo "📝 Cucumber rapor içeriği:"
                             cat target/cucumber-reports/cucumber.json || echo "Cucumber rapor dosyası bulunamadı"
-                        '''
+                        """
                     } catch (Exception e) {
                         echo """
                         ❌ Test Hatası
