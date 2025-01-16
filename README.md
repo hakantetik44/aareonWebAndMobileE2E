@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://www.aareon.fr/wp-content/uploads/2021/03/logo-aareon.png" width="400px">
+<img src="https://storage.googleapis.com/bkt-ph-prod-homepage-media-public/original_images/aareon-logo.png" width="400px">
 
 # 🏢 Tests E2E Les Residences
 
@@ -126,7 +126,7 @@ Copyright © 2025 [Aareon France](https://www.aareon.fr/). Tous droits réservé
 
 ---
 
-<img src="https://www.aareon.fr/wp-content/uploads/2021/03/logo-aareon.png" width="200px">
+<img src="https://storage.googleapis.com/bkt-ph-prod-homepage-media-public/original_images/aareon-logo.png" width="200px">
 
 *Développé avec ❤️ par l'équipe QA d'Aareon France*
 
