@@ -134,6 +134,66 @@ allure serve target/allure-results
 open target/cucumber-reports/index.html
 ```
 
+## 🔄 Intégration Continue (CI/CD)
+
+### Jenkins Pipeline
+
+Le projet utilise Jenkins pour l'intégration et le déploiement continus. Le `Jenkinsfile` définit plusieurs stages :
+
+```groovy
+// Extrait du Jenkinsfile
+pipeline {
+    agent any
+    stages {
+        stage('Build') { ... }
+        stage('Test') { ... }
+        stage('Report') { ... }
+    }
+}
+```
+
+### 🔧 Configuration Jenkins
+
+1. **Prérequis Jenkins**
+   - Jenkins 2.375+ avec Pipeline plugin
+   - Plugins nécessaires :
+     - Maven Integration
+     - Cucumber Reports
+     - Allure Jenkins Plugin
+     - Android SDK
+     - Xcode Integration
+
+2. **Variables d'Environnement**
+   ```groovy
+   environment {
+       JAVA_HOME = '/usr/lib/jvm/java-11-openjdk'
+       ANDROID_HOME = '/opt/android-sdk'
+       XCODE_PATH = '/Applications/Xcode.app'
+   }
+   ```
+
+3. **Déclencheurs**
+   - Push sur la branche main
+   - Pull Requests
+   - Planification quotidienne (nightly builds)
+
+### 📊 Rapports Jenkins
+
+Le pipeline génère automatiquement :
+- Rapports Cucumber dans Jenkins
+- Tableaux de bord Allure
+- Couverture de code
+- Temps d'exécution des tests
+
+### 🔔 Notifications
+
+Configuration des notifications pour :
+- Slack
+- Email
+- Microsoft Teams
+
+Pour plus de détails, consultez le [Jenkinsfile](./Jenkinsfile) du projet.
+
 ## 🌍 UTM Tracking
 - 🏢 **Source** : aareon_france
 - 💻 **Medium** : github
