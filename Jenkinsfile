@@ -151,22 +151,22 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh """
-                            echo "Starting test execution..."
-                            mvn clean test -Dcucumber.filter.tags="@smoke" \
-                            -DplatformName=${params.PLATFORM} \
-                            -Dappium.server.url=http://localhost:4723 \
-                            -Dmaven.test.failure.ignore=true \
-                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json" \
-                            -Dcucumber.plugin="html:target/cucumber-reports/cucumber.html" \
-                            -Dcucumber.plugin="pretty" \
-                            -Dcucumber.plugin="io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
-                        """
+                        // Rapor dizinlerini oluştur
+                        sh '''
+                            mkdir -p target/cucumber-reports
+                            mkdir -p target/allure-results
+                        '''
+
+                        // Test komutu
+                        sh '''
+                            mvn clean test \
+                            -Dplatform=${params.PLATFORM} \
+                            -Dcucumber.options="--plugin json:target/cucumber-reports/cucumber.json --plugin pretty" \
+                            -Dallure.results.directory=target/allure-results
+                        '''
                     } catch (Exception e) {
-                        echo "Test execution failed: ${e.message}"
-                        sh 'cat appium.log || true'
-                        currentBuild.result = 'UNSTABLE'
-                        // Don't throw the exception here to allow report generation
+                        currentBuild.result = 'FAILURE'
+                        error "Test execution failed: ${e.message}"
                     }
                 }
             }
@@ -226,8 +226,9 @@ pipeline {
                 cucumber([
                     buildStatus: 'UNSTABLE',
                     reportTitle: 'Cucumber Report',
-                    fileIncludePattern: '**/cucumber.json',
+                    fileIncludePattern: 'cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
+                    sortingMethod: 'ALPHABETICAL',
                     trendsLimit: 10,
                     classifications: [
                         [
