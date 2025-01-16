@@ -175,18 +175,24 @@ pipeline {
                             set -x
                             mvn clean test \
                             -Dplatform="${params.PLATFORM}" \
-                            -Dcucumber.options="--plugin json:target/cucumber-reports/cucumber.json --plugin pretty" \
+                            -Dcucumber.options="--plugin json:target/cucumber.json --plugin pretty" \
                             -Dallure.results.directory=target/allure-results \
                             -Dmaven.test.failure.ignore=true \
                             -X
+                            
+                            # Rapor dizinlerini oluştur ve dosyaları taşı
+                            mkdir -p target/cucumber-reports
+                            if [ -f target/cucumber.json ]; then
+                                mv target/cucumber.json target/cucumber-reports/
+                                echo "✅ Cucumber raporu taşındı"
+                            else
+                                echo "⚠️ Cucumber rapor dosyası bulunamadı"
+                            fi
                             
                             echo "📊 Test sonrası dizin yapısı:"
                             ls -la target/
                             ls -la target/cucumber-reports/ || echo "Cucumber rapor dizini bulunamadı"
                             ls -la target/allure-results/ || echo "Allure rapor dizini bulunamadı"
-                            
-                            echo "📝 Cucumber rapor içeriği:"
-                            cat target/cucumber-reports/cucumber.json || echo "Cucumber rapor dosyası bulunamadı"
                         """
                     } catch (Exception e) {
                         echo """
@@ -264,6 +270,12 @@ pipeline {
                     jsonReportDirectory: 'target/cucumber-reports',
                     sortingMethod: 'ALPHABETICAL',
                     trendsLimit: 10,
+                    failedScenariosNumber: -1,
+                    failedFeaturesNumber: -1,
+                    failedStepsNumber: -1,
+                    skippedStepsNumber: -1,
+                    pendingStepsNumber: -1,
+                    undefinedStepsNumber: -1,
                     classifications: [
                         [
                             'key': 'Platform',
