@@ -196,12 +196,17 @@ pipeline {
         always {
             script {
                 // Appium server'ı durdur
-                if (params.PLATFORM != 'Web') {
-                    sh 'pkill -f appium || true'
-                }
+                sh 'pkill -f appium || true'
                 
-                // Test raporlarını arşivle
-                archiveArtifacts artifacts: '**/target/**/*', allowEmptyArchive: true
+                // Artifact'ları arşivle
+                archiveArtifacts artifacts: '**/target/', allowEmptyArchive: true
+                
+                // Eski Allure raporlarını temizle
+                sh '''
+                    rm -rf allure-report || true
+                    rm -rf allure-results || true
+                    rm -f allure-report.zip || true
+                '''
                 
                 // Allure raporu oluştur
                 allure([
@@ -213,20 +218,27 @@ pipeline {
                 ])
                 
                 // Cucumber raporu oluştur
-                cucumber buildStatus: 'UNSTABLE',
-                        failedFeaturesNumber: -1,
-                        failedScenariosNumber: -1,
-                        skippedStepsNumber: -1,
-                        failedStepsNumber: -1,
-                        classifications: [
-                            [key: 'Platform', value: params.PLATFORM],
-                            [key: 'Branch', value: env.BRANCH_NAME]
+                cucumber([
+                    buildStatus: 'UNSTABLE',
+                    reportTitle: 'Cucumber Report',
+                    fileIncludePattern: '**/*.json',
+                    trendsLimit: 10,
+                    classifications: [
+                        [
+                            'key': 'Platform',
+                            'value': params.PLATFORM
+                        ],
+                        [
+                            'key': 'Branch',
+                            'value': env.BRANCH_NAME
                         ]
+                    ]
+                ])
                 
                 // Workspace'i temizle
                 cleanWs()
                 
-                // Test sonuçlarını yazdır
+                // Test sonuçlarını göster
                 echo """
                 ❌ Test Sonuçları:
                 📱 Platform: ${params.PLATFORM}
