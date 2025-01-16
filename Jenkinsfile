@@ -226,7 +226,8 @@ pipeline {
                 cucumber([
                     buildStatus: 'UNSTABLE',
                     reportTitle: 'Cucumber Report',
-                    fileIncludePattern: '**/*.json',
+                    fileIncludePattern: '**/cucumber.json',
+                    jsonReportDirectory: 'target/cucumber-reports',
                     trendsLimit: 10,
                     classifications: [
                         [
