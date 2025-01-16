@@ -36,44 +36,44 @@ pipeline {
             }
             steps {
                 script {
+                    def setupSteps = [
+                        'Check Node version': 'node -v',
+                        'Check npm version': 'npm -v',
+                        'Check current user': 'whoami',
+                        'Check current directory': 'pwd',
+                        'List global packages': 'npm list -g --depth=0',
+                        'Uninstall old Appium': 'npm uninstall -g appium || true',
+                        'Install Appium': 'npm install -g appium@2.0.0',
+                        'Check Appium version': 'appium -v',
+                        'Install uiautomator2': 'appium driver install uiautomator2',
+                        'Install xcuitest': 'appium driver install xcuitest',
+                        'List Appium drivers': 'appium driver list'
+                    ]
+
                     try {
-                        // Node.js ve npm versiyonlarını kontrol et
-                        sh '''
-                            set -x  # Enable command echo
-                            echo "Node version check:"
-                            node -v || echo "Node.js is not installed or not in PATH"
-                            
-                            echo "NPM version check:"
-                            npm -v || echo "npm is not installed or not in PATH"
-                            
-                            echo "Current user and permissions:"
-                            whoami
-                            echo "Current directory:"
-                            pwd
-                            
-                            echo "Removing existing Appium installations..."
-                            npm list -g appium || true
-                            npm uninstall -g appium || true
-                            npm uninstall -g appium-inspector || true
-                            npm uninstall -g appium-xcuitest-driver || true
-                            
-                            echo "Installing Appium..."
-                            npm install -g appium@2.0.0 || { echo "Failed to install Appium"; exit 1; }
-                            
-                            echo "Verifying Appium installation..."
-                            appium -v || { echo "Appium installation verification failed"; exit 1; }
-                            
-                            echo "Installing Appium drivers..."
-                            appium driver list || true
-                            appium driver install uiautomator2 || { echo "Failed to install uiautomator2 driver"; exit 1; }
-                            appium driver install xcuitest || { echo "Failed to install xcuitest driver"; exit 1; }
-                            
-                            echo "Verifying installed drivers:"
-                            appium driver list
-                        '''
+                        setupSteps.each { stepName, command ->
+                            echo "Executing: ${stepName}"
+                            def result = sh(script: command, returnStatus: true)
+                            if (result != 0) {
+                                error "Failed at step '${stepName}' with exit code ${result}"
+                            }
+                            echo "${stepName} completed successfully"
+                        }
                     } catch (Exception e) {
-                        echo "Setup Environment stage failed with error: ${e.message}"
-                        sh 'npm list -g || true'  // List global packages
+                        echo """
+                        ❌ Setup Environment Failed
+                        Error: ${e.message}
+                        
+                        Debugging Information:
+                        Node Version: ${sh(script: 'node -v || echo "Not installed"', returnStdout: true).trim()}
+                        NPM Version: ${sh(script: 'npm -v || echo "Not installed"', returnStdout: true).trim()}
+                        User: ${sh(script: 'whoami', returnStdout: true).trim()}
+                        Directory: ${sh(script: 'pwd', returnStdout: true).trim()}
+                        
+                        Global NPM packages:
+                        ${sh(script: 'npm list -g --depth=0 || echo "Failed to list packages"', returnStdout: true).trim()}
+                        """
+                        
                         currentBuild.result = 'FAILURE'
                         error "Setup Environment stage failed: ${e.message}"
                     }
