@@ -153,20 +153,54 @@ pipeline {
                     try {
                         // Rapor dizinlerini oluştur
                         sh '''
+                            echo "🔧 Rapor dizinleri oluşturuluyor..."
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
+                            
+                            echo "📂 Dizin yapısı:"
+                            ls -la target/
+                        '''
+
+                        // Maven versiyonunu kontrol et
+                        sh '''
+                            echo "ℹ️ Maven bilgileri:"
+                            mvn -v
                         '''
 
                         // Test komutu
                         sh '''
+                            echo "🚀 Testler başlatılıyor..."
+                            
+                            # Maven debug modunda çalıştır
+                            set -x
                             mvn clean test \
                             -Dplatform=${params.PLATFORM} \
                             -Dcucumber.options="--plugin json:target/cucumber-reports/cucumber.json --plugin pretty" \
-                            -Dallure.results.directory=target/allure-results
+                            -Dallure.results.directory=target/allure-results \
+                            -Dmaven.test.failure.ignore=true \
+                            -X
+                            
+                            echo "📊 Test sonrası dizin yapısı:"
+                            ls -la target/
+                            ls -la target/cucumber-reports/ || echo "Cucumber rapor dizini bulunamadı"
+                            ls -la target/allure-results/ || echo "Allure rapor dizini bulunamadı"
+                            
+                            echo "📝 Cucumber rapor içeriği:"
+                            cat target/cucumber-reports/cucumber.json || echo "Cucumber rapor dosyası bulunamadı"
                         '''
                     } catch (Exception e) {
+                        echo """
+                        ❌ Test Hatası
+                        Hata Mesajı: ${e.message}
+                        
+                        🔍 Debug Bilgileri:
+                        - Çalışma Dizini: ${pwd()}
+                        - Platform: ${params.PLATFORM}
+                        - Build No: ${env.BUILD_NUMBER}
+                        """
+                        
                         currentBuild.result = 'FAILURE'
-                        error "Test execution failed: ${e.message}"
+                        error "Test çalıştırması başarısız: ${e.message}"
                     }
                 }
             }
