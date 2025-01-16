@@ -1,0 +1,38 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Logs
+*.log
+logs/
+
+# Test outputs
+test-output/
+allure-results/
+allure-report/
+
+# Mac OS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Mobile Tools
+*.apk
+*.app 
