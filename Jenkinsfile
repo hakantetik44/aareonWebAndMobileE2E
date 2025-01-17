@@ -197,14 +197,10 @@ pipeline {
                 allure([
                     includeProperties: true,
                     jdk: '',
-                    properties: [
-                        [key: 'Platform', value: "${params.PLATFORM}"],
-                        [key: 'Browser', value: 'Mobile'],
-                        [key: 'Environment', value: 'Test'],
-                        [key: 'Branch', value: "${env.BRANCH_NAME ?: 'unknown'}"]
-                    ],
+                    properties: [],
                     reportBuildPolicy: 'ALWAYS',
-                    results: [[path: 'target/allure-results']]
+                    results: [[path: 'target/allure-results']],
+                    report: 'target/allure-report'
                 ])
 
                 // Allure komut satırı ile raporu yeniden oluştur
