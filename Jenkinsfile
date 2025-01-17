@@ -206,12 +206,18 @@ pipeline {
                     echo "Test execution complete"
                 '''
                 
+                // Ensure cucumber-reports directory exists
+                sh '''
+                    mkdir -p target/cucumber-reports
+                    find target -name "*.json" -exec cp {} target/cucumber-reports/ \\;
+                '''
+                
                 cucumber(
-                    fileIncludePattern: 'target/cucumber-reports/cucumber.json',
+                    fileIncludePattern: '**/*.json',
                     jsonReportDirectory: 'target/cucumber-reports',
-                    reportTitle: 'Résultats des Tests',
+                    reportTitle: 'Aareon Mobile Test Results',
                     buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'SUCCESS',
-                    classificationsFilePattern: '**/classifications.properties',
+                    classificationsFiles: ['config/classifications.properties'],
                     mergeFeaturesById: true,
                     mergeFeaturesWithRetest: true,
                     failedFeaturesNumber: 999,
@@ -221,6 +227,9 @@ pipeline {
                     skippedStepsNumber: 999,
                     undefinedStepsNumber: 999
                 )
+                
+                // Archive the Cucumber reports
+                archiveArtifacts artifacts: 'target/cucumber-reports/**/*', allowEmptyArchive: true
                 
                 // Allure rapor dizinini temizle
                 sh 'rm -rf target/allure-report || true'
