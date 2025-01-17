@@ -182,7 +182,10 @@ pipeline {
                     jsonReportDirectory: 'target/cucumber-reports',
                     reportTitle: 'Test Sonuçları',
                     buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'FAILURE',
-                    skipFailedTests: true
+                    skipFailedTests: true,
+                    classificationsFilePattern: '**/classifications.properties',
+                    mergeFeaturesById: true,
+                    mergeFeaturesWithRetest: true
                 )
                 
                 allure([
