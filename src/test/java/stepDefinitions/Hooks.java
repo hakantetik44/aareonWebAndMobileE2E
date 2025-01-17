@@ -18,7 +18,7 @@ public class Hooks {
     public void setUp(Scenario scenario) {
         this.scenario = scenario;
         OS.OS = ConfigReader.getProperty("platformName", "Android");
-        System.out.println("Test başlıyor - Platform: " + OS.OS);
+        System.out.println("Test commence - Plateforme: " + OS.OS);
     }
 
     @Given("l'application Les Residences est ouverte")
