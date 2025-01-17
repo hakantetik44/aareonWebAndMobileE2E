@@ -49,15 +49,33 @@ public class ResidencePage extends BasePage {
     }
 
     public boolean isErrorMessageDisplayed() {
-        By errorMessage = OS.isAndroid() ?
-                AppiumBy.xpath("//android.widget.TextView[contains(@text, 'Identifiant ou mot de passe incorrect')]") :
-                AppiumBy.accessibilityId("errorMessage");
-        try {
-            return getCurrentDriver().findElement(errorMessage).isDisplayed();
-        } catch (Exception e) {
-            System.out.println("Message d'erreur non trouvé: " + e.getMessage());
-            return false;
+        By[] errorSelectors = OS.isAndroid() ?
+                new By[]{
+                    AppiumBy.xpath("//android.widget.TextView[contains(@text, 'Identifiant ou mot de passe incorrect')]"),
+                    AppiumBy.xpath("//*[contains(@text, 'erreur')]"),
+                    AppiumBy.xpath("//*[contains(@resource-id, 'error')]"),
+                    AppiumBy.xpath("//*[contains(@resource-id, 'alert')]")
+                } :
+                new By[]{
+                    AppiumBy.accessibilityId("errorMessage"),
+                    AppiumBy.accessibilityId("alertMessage")
+                };
+                
+        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(10));
+        
+        for (By selector : errorSelectors) {
+            try {
+                if (wait.until(ExpectedConditions.presenceOfElementLocated(selector)).isDisplayed()) {
+                    return true;
+                }
+            } catch (Exception e) {
+                // Continue to next selector
+                continue;
+            }
         }
+        
+        System.out.println("Aucun message d'erreur trouvé avec les sélecteurs disponibles");
+        return false;
     }
 
     public String getErrorMessage() {
