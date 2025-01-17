@@ -1,7 +1,7 @@
 package utils;
 
 public class OS {
-    public static String OS = ConfigReader.getProperty("platformName");
+    public static String OS = "Android";
 
     public static boolean isAndroid() {
         return OS.equalsIgnoreCase("Android");
@@ -10,8 +10,8 @@ public class OS {
     public static boolean isIOS() {
         return OS.equalsIgnoreCase("iOS");
     }
-    
+
     public static boolean isWeb() {
-        return "Web".equalsIgnoreCase(OS);
+        return OS.equalsIgnoreCase("Web");
     }
-} 
+}

@@ -4,6 +4,8 @@ import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.android.options.UiAutomator2Options;
 import io.appium.java_client.ios.options.XCUITestOptions;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import java.net.URL;
 import java.time.Duration;
 
@@ -13,6 +15,27 @@ public class Driver {
 
     public static AppiumDriver Android;
     public static AppiumDriver iOS;
+    public static WebDriver Web;
+
+    public static WebDriver getWebDriver() {
+        if (Web == null) {
+            try {
+                System.out.println("Démarrage du driver Web...");
+                ChromeOptions options = new ChromeOptions();
+                options.addArguments("--start-maximized");
+                options.addArguments("--remote-allow-origins=*");
+                
+                Web = new ChromeDriver(options);
+                Web.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
+                Web.manage().window().maximize();
+                System.out.println("Driver Web créé avec succès!");
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la création du driver Web: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        return Web;
+    }
 
     public static AppiumDriver getAndroidDriver() {
         if (Android == null) {
@@ -73,6 +96,8 @@ public class Driver {
                 return getAndroidDriver();
             } else if (OS.isIOS()) {
                 return getIOSDriver();
+            } else if (OS.isWeb()) {
+                return getWebDriver();
             } else {
                 throw new IllegalStateException("Système d'exploitation non supporté: " + OS.OS);
             }
@@ -100,5 +125,14 @@ public class Driver {
         } catch (Exception e) {
             System.err.println("Erreur lors de la fermeture du driver Android: " + e.getMessage());
         }
+
+        try {
+            if (Web != null) {
+                Web.quit();
+                Web = null;
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la fermeture du driver Web: " + e.getMessage());
+        }
     }
-} 
+}
