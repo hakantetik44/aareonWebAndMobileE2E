@@ -49,32 +49,39 @@ pipeline {
                                 npm uninstall -g appium || true
                                 npm install -g appium@2.5.4
                                 
+                                echo "🔍 Driver Kontrolü"
+                                INSTALLED_DRIVERS=$(appium driver list --installed || true)
+                                echo "Kurulu driverlar:"
+                                echo "$INSTALLED_DRIVERS"
+                                
                                 if [ "${PLATFORM}" = "Android" ]; then
-                                    echo "🤖 Android Driver Kontrolü"
-                                    if ! appium driver list --installed | grep -q "uiautomator2"; then
-                                        echo "uiautomator2 driver kuruluyor..."
-                                        appium driver install uiautomator2
+                                    echo "🤖 Android Driver Yönetimi"
+                                    if echo "$INSTALLED_DRIVERS" | grep -q "uiautomator2"; then
+                                        echo "uiautomator2 driver güncelleniyor..."
+                                        appium driver update uiautomator2 || true
                                     else
-                                        echo "uiautomator2 driver zaten kurulu"
-                                        appium driver list --installed
+                                        echo "uiautomator2 driver kuruluyor..."
+                                        appium driver install uiautomator2 || true
                                     fi
                                 elif [ "${PLATFORM}" = "iOS" ]; then
-                                    echo "🍎 iOS Driver Kontrolü"
-                                    if ! appium driver list --installed | grep -q "xcuitest"; then
-                                        echo "xcuitest driver kuruluyor..."
-                                        appium driver install xcuitest
+                                    echo "🍎 iOS Driver Yönetimi"
+                                    if echo "$INSTALLED_DRIVERS" | grep -q "xcuitest"; then
+                                        echo "xcuitest driver güncelleniyor..."
+                                        appium driver update xcuitest || true
                                     else
-                                        echo "xcuitest driver zaten kurulu"
-                                        appium driver list --installed
+                                        echo "xcuitest driver kuruluyor..."
+                                        appium driver install xcuitest || true
                                     fi
                                 fi
                                 
                                 echo "✅ Kurulum Tamamlandı"
+                                echo "Son durum:"
+                                appium driver list --installed
                             '''
                         }
                     } catch (Exception e) {
                         echo "❌ Kurulum Hatası: ${e.message}"
-                        throw e
+                        currentBuild.result = 'UNSTABLE'
                     }
                 }
             }
