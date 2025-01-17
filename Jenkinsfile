@@ -196,42 +196,23 @@ pipeline {
                             mkdir -p target/allure-results
 
                             echo "🚀 Testler başlatılıyor..."
-                            if [ "${PLATFORM}" = "Android" ]; then
-                                echo "Android testleri başlatılıyor..."
-                                mvn clean test -Dtags="@android"
-                            elif [ "${PLATFORM}" = "iOS" ]; then
-                                echo "iOS testleri başlatılıyor..."
-                                mvn clean test -Dtags="@ios"
-                            else
-                                echo "Web testleri başlatılıyor..."
-                                mvn clean test -Dtags="@web"
-                            fi
-
-                            echo "📊 Rapor dosyaları kontrol ediliyor..."
-                            find target/cucumber-reports -name "*.json" -type f
-                            find target/allure-results -type f
+                            mvn clean test -DplatformName=${PLATFORM} -Dcucumber.filter.tags="@${PLATFORM.toLowerCase()}"
                         '''
-
-                        // Cucumber JSON dosyasının varlığını kontrol et
-                        if (!fileExists('target/cucumber-reports/cucumber.json')) {
-                            error "Cucumber JSON rapor dosyası oluşturulamadı!"
-                        }
                     } catch (Exception e) {
                         echo """
                         ❌ Test Hatası
                         Hata Mesajı: ${e.message}
 
                         🔍 Debug Bilgileri:
-                        - Çalışma Dizini: ${pwd()}
-                        - Platform: ${params.PLATFORM}
-                        - Build No: ${env.BUILD_NUMBER}
+                        - Çalışma Dizini: ${WORKSPACE}
+                        - Platform: ${PLATFORM}
+                        - Build No: ${BUILD_NUMBER}
 
                         📋 Kontrol Listesi:
                         1. pom.xml'de cucumber-reporting dependency var mı?
                         2. Test sınıflarında @CucumberOptions doğru yapılandırılmış mı?
                         3. target/cucumber-reports dizini oluşturulabildi mi?
                         """
-
                         currentBuild.result = 'FAILURE'
                         throw e
                     }

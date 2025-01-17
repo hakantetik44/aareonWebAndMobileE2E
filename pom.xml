@@ -240,19 +240,41 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.version}</version>
                 <configuration>
-                    <testFailureIgnore>true</testFailureIgnore>
-                    <parallel>none</parallel>
-                    <forkCount>1</forkCount>
-                    <reuseForks>true</reuseForks>
+                    <systemPropertyVariables>
+                        <platformName>${platformName}</platformName>
+                        <cucumber.filter.tags>${cucumber.filter.tags}</cucumber.filter.tags>
+                    </systemPropertyVariables>
                     <includes>
                         <include>**/CukesRunner.java</include>
                     </includes>
-                    <argLine>
-                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
-                        -Dcucumber.plugin="pretty,json:target/cucumber.json,io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
-                        -Dallure.results.directory=${allure.results.directory}
-                    </argLine>
+                    <testFailureIgnore>true</testFailureIgnore>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>net.masterthought</groupId>
+                <artifactId>maven-cucumber-reporting</artifactId>
+                <version>5.7.8</version>
+                <executions>
+                    <execution>
+                        <id>execution</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <projectName>Aareon Mobile Tests</projectName>
+                            <outputDirectory>${project.build.directory}/cucumber-reports</outputDirectory>
+                            <inputDirectory>${project.build.directory}/cucumber-reports</inputDirectory>
+                            <jsonFiles>
+                                <param>**/*.json</param>
+                            </jsonFiles>
+                            <classificationFiles>
+                                <param>**/classifications/*.properties</param>
+                            </classificationFiles>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Allure Maven Plugin -->
