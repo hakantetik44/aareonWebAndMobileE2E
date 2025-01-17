@@ -198,24 +198,13 @@ pipeline {
                             echo "🚀 Testler başlatılıyor..."
                             if [ "${PLATFORM}" = "Android" ]; then
                                 echo "Android testleri başlatılıyor..."
-                                mvn clean test \
-                                    -DplatformName=Android \
-                                    -Dcucumber.filter.tags="@android" \
-                                    -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty" \
-                                    -Dappium.server.url=http://localhost:4723
+                                mvn clean test -Dtags="@android"
                             elif [ "${PLATFORM}" = "iOS" ]; then
                                 echo "iOS testleri başlatılıyor..."
-                                mvn clean test \
-                                    -DplatformName=iOS \
-                                    -Dcucumber.filter.tags="@ios" \
-                                    -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty" \
-                                    -Dappium.server.url=http://localhost:4723
+                                mvn clean test -Dtags="@ios"
                             else
                                 echo "Web testleri başlatılıyor..."
-                                mvn clean test \
-                                    -DplatformName=Web \
-                                    -Dcucumber.filter.tags="@web" \
-                                    -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty"
+                                mvn clean test -Dtags="@web"
                             fi
 
                             echo "📊 Rapor dosyaları kontrol ediliyor..."
