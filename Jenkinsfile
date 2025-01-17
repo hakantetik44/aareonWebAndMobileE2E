@@ -4,12 +4,14 @@ pipeline {
     environment {
         ANDROID_HOME = '/Users/hakantetik/Library/Android/sdk'
         PATH = "${env.ANDROID_HOME}/platform-tools:${env.ANDROID_HOME}/tools:${env.PATH}"
+        ALLURE_HOME = tool 'Allure'
     }
 
     tools {
         maven 'maven'
         jdk 'JDK17'
         nodejs 'Node'
+        allure 'Allure'
     }
 
     parameters {
@@ -188,6 +190,13 @@ pipeline {
                     mergeFeaturesWithRetest: true
                 )
                 
+                script {
+                    // Allure komut satırı aracını kullanarak rapor oluştur
+                    sh """
+                        ${ALLURE_HOME}/bin/allure generate target/allure-results --clean -o target/allure-report
+                    """
+                }
+
                 allure([
                     includeProperties: false,
                     jdk: '',
@@ -196,11 +205,8 @@ pipeline {
                     results: [[path: 'target/allure-results']]
                 ])
 
-                // Allure rapor dizinini arşivle
-                archiveArtifacts artifacts: 'target/allure-results/**/*.*', fingerprint: true
-                
-                // Allure rapor dizinini Jenkins'e kaydet
-                stash includes: 'target/allure-results/**/*', name: 'allure-results'
+                // Allure raporlarını arşivle
+                archiveArtifacts artifacts: 'target/allure-results/**/*.*,target/allure-report/**/*.*', fingerprint: true
 
                 echo """
                     📊 Résultats des Tests:
