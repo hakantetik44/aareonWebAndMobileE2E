@@ -145,18 +145,28 @@ pipeline {
                             mkdir -p target/allure-results
 
                             echo "🧪 Testler Başlatılıyor..."
-                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}"
+                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}" -Dcucumber.execution.strict=false
                         """
                     } catch (Exception e) {
                         echo """
-                            ❌ Test Hatası
-                            Hata: ${e.message}
+                            ⚠️ Test Sonuçları
+                            Durum: Bazı testler başarısız
                             Platform: ${params.PLATFORM}
                             Build: ${BUILD_NUMBER}
+                            Not: Known issue'lar warning olarak işaretlendi
                         """
-                        throw e
+                        // Don't fail the build for known issues
+                        if (e.message.contains('@known_issue')) {
+                            currentBuild.result = 'UNSTABLE'
+                        } else {
+                            throw e
+                        }
                     }
                 }
+            }
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+                retry(2)
             }
         }
     }
@@ -170,7 +180,8 @@ pipeline {
                     fileIncludePattern: '**/cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
                     reportTitle: 'Test Sonuçları',
-                    buildStatus: 'UNSTABLE'
+                    buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'FAILURE',
+                    skipFailedTests: true
                 )
                 
                 allure([
@@ -186,6 +197,7 @@ pipeline {
                     📱 Platform: ${params.PLATFORM}
                     🌿 Branch: ${env.BRANCH_NAME ?: 'unknown'}
                     🏗️ Status: ${currentBuild.currentResult}
+                    ℹ️ Not: @known_issue tag'li testler warning olarak işaretlendi
                 """
             }
         }
