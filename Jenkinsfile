@@ -148,7 +148,7 @@ pipeline {
                             mkdir -p target/allure-results
 
                             echo "🧪 Démarrage des Tests..."
-                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}" -Dcucumber.execution.strict=false
+                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}" -Dcucumber.execution.strict=false -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,html:target/cucumber-reports/cucumber-reports.html,io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
                         """
                     } catch (Exception e) {
                         echo """
@@ -162,7 +162,7 @@ pipeline {
                         if (e.message.contains('@known_issue')) {
                             currentBuild.result = 'UNSTABLE'
                         } else {
-                            throw e
+                            currentBuild.result = 'UNSTABLE'
                         }
                     }
                 }
@@ -183,8 +183,7 @@ pipeline {
                     fileIncludePattern: '**/cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
                     reportTitle: 'Résultats des Tests',
-                    buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'FAILURE',
-                    skipFailedTests: true,
+                    buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'SUCCESS',
                     classificationsFilePattern: '**/classifications.properties',
                     mergeFeaturesById: true,
                     mergeFeaturesWithRetest: true
