@@ -29,9 +29,11 @@ public class Hooks {
                 System.out.println("Driver Android créé avec succès");
             }
         } catch (Exception e) {
-            System.out.println("Erreur lors du démarrage du driver: " + e.getMessage());
+            String errorMsg = "Erreur critique lors du démarrage de l'application: " + e.getMessage();
+            System.err.println(errorMsg);
             e.printStackTrace();
-            throw e;
+            scenario.log(errorMsg);  // Log error to Cucumber report
+            throw new RuntimeException(errorMsg, e);
         }
     }
 

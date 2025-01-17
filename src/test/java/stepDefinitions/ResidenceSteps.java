@@ -61,11 +61,8 @@ public class ResidenceSteps {
 
     @Then("la connexion doit échouer")
     public void laConnexionDoitEchouer() {
-        try {
-            residencePage.clickInscription();
-            System.out.println("La connexion a échoué comme prévu");
-        } catch (Exception e) {
-            fail("La connexion semble avoir réussi alors qu'elle aurait dû échouer");
-        }
+        assertTrue("La connexion aurait dû échouer mais aucun message d'erreur n'est affiché", 
+                  residencePage.isErrorMessageDisplayed());
+        System.out.println("La connexion a échoué comme prévu");
     }
 }
