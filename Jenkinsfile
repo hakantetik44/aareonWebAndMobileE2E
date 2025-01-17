@@ -167,7 +167,7 @@ pipeline {
                             sleep 30
 
                             echo "Server durumu kontrol ediliyor..."
-                            if curl -s http://localhost:4723/status | grep -q "status.*0"; then
+                            if curl -s http://localhost:4723/status | grep -q '"ready":true'; then
                                 echo "✅ Appium server başarıyla çalışıyor"
                             else
                                 echo "❌ Appium server başlatılamadı"
