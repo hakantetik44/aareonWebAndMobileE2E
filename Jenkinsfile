@@ -23,132 +23,52 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
         timestamps()
-        disableConcurrentBuilds()
-        skipDefaultCheckout()
     }
 
     stages {
         stage('Initialize') {
             steps {
-                cleanWs()
-                checkout scm
-            }
-        }
-
-        stage('Android Ortam Kontrolü') {
-            when {
-                expression { params.PLATFORM == 'Android' }
-            }
-            steps {
                 script {
-                    try {
-                        sh '''
-                            echo "🔍 Android SDK kontrolü:"
-                            echo "ANDROID_HOME: $ANDROID_HOME"
-
-                            echo "📱 Bağlı cihazlar kontrol ediliyor..."
-                            adb version
-                            adb devices
-
-                            if ! adb devices | grep -q "device$"; then
-                                echo "❌ Hiç cihaz bulunamadı veya yetkisiz!"
-                                echo "📋 Kontrol edilecekler:"
-                                echo "1. Fiziksel cihaz bağlı mı?"
-                                echo "2. Cihazda USB hata ayıklama açık mı?"
-                                echo "3. Cihaz yetkili mi? (Cihaz ekranını kontrol edin)"
-                                exit 1
-                            fi
-
-                            echo "✅ Cihaz bağlantısı başarılı"
-                        '''
-                    } catch (Exception e) {
-                        echo """
-                        ❌ Android Ortam Hatası
-                        Hata: ${e.message}
-
-                        🔍 Kontrol Listesi:
-                        1. Android SDK kurulu mu? ($ANDROID_HOME)
-                        2. Platform Tools kurulu mu?
-                        3. adb çalışıyor mu?
-                        4. Jenkins kullanıcısının yetkileri var mı?
-                        """
-                        currentBuild.result = 'FAILURE'
-                        error "Android ortam kontrolü başarısız: ${e.message}"
-                    }
+                    sh '''
+                        echo "🔧 Ortam Bilgileri:"
+                        echo "ANDROID_HOME: $ANDROID_HOME"
+                        echo "PATH: $PATH"
+                        echo "JAVA_HOME: $JAVA_HOME"
+                    '''
                 }
             }
         }
 
         stage('Setup Environment') {
-            when {
-                expression { params.PLATFORM != 'Web' }
-            }
             steps {
                 script {
                     try {
-                        sh '''
-                            echo "Mevcut kurulumları temizleme..."
-                            npm uninstall -g appium || true
-                            npm uninstall -g appium-doctor || true
-                            rm -rf ~/.appium || true
-                            rm -rf ~/.npm/_cacache || true
-                            npm cache clean -f
-
-                            echo "Node ve npm versiyonları:"
-                            node -v
-                            npm -v
-
-                            echo "Appium kurulumu yapılıyor..."
-                            npm install -g appium@2.5.4
-                            appium -v
-                        '''
-
-                        if (params.PLATFORM == 'Android') {
+                        if (params.PLATFORM != 'Web') {
                             sh '''
-                                echo "uiautomator2 sürücüsü kuruluyor..."
-                                appium driver uninstall uiautomator2 || true
-                                appium driver install uiautomator2@3.9.8
-                                echo "Kurulu sürücüler:"
-                                appium driver list
-                            '''
-                        } else if (params.PLATFORM == 'iOS') {
-                            sh '''
-                                echo "xcuitest sürücüsü kuruluyor..."
-                                appium driver uninstall xcuitest || true
-                                appium driver install xcuitest
-                                echo "Kurulu sürücüler:"
-                                appium driver list
+                                echo "📱 Appium Kurulumu"
+                                npm uninstall -g appium || true
+                                npm install -g appium@2.5.4
+                                
+                                if [ "${PLATFORM}" = "Android" ]; then
+                                    echo "🤖 Android Driver Kurulumu"
+                                    appium driver install uiautomator2
+                                elif [ "${PLATFORM}" = "iOS" ]; then
+                                    echo "🍎 iOS Driver Kurulumu"
+                                    appium driver install xcuitest
+                                fi
+                                
+                                echo "✅ Kurulum Tamamlandı"
                             '''
                         }
-
-                        sh '''
-                            echo "Kurulum sonrası durum:"
-                            echo "Appium versiyonu:"
-                            appium -v
-                            echo "Kurulu sürücüler:"
-                            appium driver list
-                        '''
-
                     } catch (Exception e) {
-                        echo """
-                        ❌ Kurulum Hatası
-                        Hata: ${e.message}
-
-                        Sistem Bilgileri:
-                        Node: ${sh(script: 'node -v || echo "Kurulu değil"', returnStdout: true).trim()}
-                        NPM: ${sh(script: 'npm -v || echo "Kurulu değil"', returnStdout: true).trim()}
-                        Kullanıcı: ${sh(script: 'whoami', returnStdout: true).trim()}
-                        Dizin: ${sh(script: 'pwd', returnStdout: true).trim()}
-                        """
-
-                        currentBuild.result = 'FAILURE'
-                        error "Kurulum başarısız: ${e.message}"
+                        echo "❌ Kurulum Hatası: ${e.message}"
+                        throw e
                     }
                 }
             }
         }
 
-        stage('Start Appium Server') {
+        stage('Start Appium') {
             when {
                 expression { params.PLATFORM != 'Web' }
             }
@@ -156,30 +76,18 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            echo "Var olan Appium süreçleri temizleniyor..."
+                            echo "🚀 Appium Başlatılıyor..."
                             pkill -f appium || true
-                            sleep 5
-
-                            echo "Appium server başlatılıyor..."
-                            appium --allow-insecure chromedriver_autodownload -p 4723 --log-level debug --relaxed-security > appium.log 2>&1 &
-
-                            echo "Server başlaması bekleniyor..."
-                            sleep 30
-
-                            echo "Server durumu kontrol ediliyor..."
-                            if curl -s http://localhost:4723/status | grep -q '"ready":true'; then
-                                echo "✅ Appium server başarıyla çalışıyor"
-                            else
-                                echo "❌ Appium server başlatılamadı"
-                                echo "📄 Appium logları:"
-                                cat appium.log
-                                exit 1
+                            appium --log appium.log --relaxed-security &
+                            sleep 10
+                            
+                            if [ "${PLATFORM}" = "Android" ]; then
+                                echo "📱 Android Cihaz Kontrolü"
+                                adb devices
                             fi
                         '''
                     } catch (Exception e) {
-                        echo "❌ Appium Server Hatası: ${e.message}"
-                        sh 'cat appium.log || true'
-                        currentBuild.result = 'FAILURE'
+                        echo "❌ Appium Başlatma Hatası: ${e.message}"
                         throw e
                     }
                 }
@@ -190,31 +98,22 @@ pipeline {
             steps {
                 script {
                     try {
-                        def platformTag = PLATFORM.toLowerCase()
+                        def platformTag = params.PLATFORM.toLowerCase()
                         sh """
-                            echo "🔧 Rapor dizinleri oluşturuluyor..."
+                            echo "📂 Test Dizinleri Oluşturuluyor..."
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
-                            echo "🚀 Testler başlatılıyor..."
-                            mvn clean test -DplatformName=${PLATFORM} -Dcucumber.filter.tags="@${platformTag}"
+                            echo "🧪 Testler Başlatılıyor..."
+                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}"
                         """
                     } catch (Exception e) {
                         echo """
-                        ❌ Test Hatası
-                        Hata Mesajı: ${e.message}
-
-                        🔍 Debug Bilgileri:
-                        - Çalışma Dizini: ${WORKSPACE}
-                        - Platform: ${PLATFORM}
-                        - Build No: ${BUILD_NUMBER}
-
-                        📋 Kontrol Listesi:
-                        1. pom.xml'de cucumber-reporting dependency var mı?
-                        2. Test sınıflarında @CucumberOptions doğru yapılandırılmış mı?
-                        3. target/cucumber-reports dizini oluşturulabildi mi?
+                            ❌ Test Hatası
+                            Hata: ${e.message}
+                            Platform: ${params.PLATFORM}
+                            Build: ${BUILD_NUMBER}
                         """
-                        currentBuild.result = 'FAILURE'
                         throw e
                     }
                 }
@@ -225,30 +124,15 @@ pipeline {
     post {
         always {
             script {
-                // Appium'u durdur
                 sh 'pkill -f appium || true'
-
-                // Test sonuçlarını arşivle
-                archiveArtifacts artifacts: 'target/cucumber-reports/**, target/allure-results/**', allowEmptyArchive: true
-
-                // Cucumber raporu oluştur
-                cucumber buildStatus: 'UNSTABLE',
-                    reportTitle: 'Cucumber Report',
+                
+                cucumber(
                     fileIncludePattern: '**/cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
-                    trendsLimit: 10,
-                    classifications: [
-                        [
-                            'key': 'Platform',
-                            'value': params.PLATFORM
-                        ],
-                        [
-                            'key': 'Branch',
-                            'value': env.BRANCH_NAME ?: 'unknown'
-                        ]
-                    ]
-
-                // Allure raporu oluştur
+                    reportTitle: 'Test Sonuçları',
+                    buildStatus: 'UNSTABLE'
+                )
+                
                 allure([
                     includeProperties: false,
                     jdk: '',
@@ -257,15 +141,16 @@ pipeline {
                     results: [[path: 'target/allure-results']]
                 ])
 
-                cleanWs()
-
                 echo """
-                📊 Test Sonuçları:
-                📱 Platform: ${params.PLATFORM}
-                🌿 Branch: ${env.BRANCH_NAME ?: 'unknown'}
-                ⚠️ Status: ${currentBuild.result}
+                    📊 Test Sonuçları:
+                    📱 Platform: ${params.PLATFORM}
+                    🌿 Branch: ${env.BRANCH_NAME ?: 'unknown'}
+                    🏗️ Status: ${currentBuild.currentResult}
                 """
             }
+        }
+        cleanup {
+            cleanWs()
         }
     }
 }
