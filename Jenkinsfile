@@ -195,33 +195,23 @@ pipeline {
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
-                            echo "📂 Dizin yapısı:"
-                            ls -la target/
-
-                            echo "ℹ️ Maven bilgileri:"
-                            mvn -v
-
                             echo "🚀 Testler başlatılıyor..."
-                            mvn clean test \
+                            CUCUMBER_PUBLISH_TOKEN='' mvn clean test \
                             -Dplatform="${PLATFORM}" \
-                            -Dcucumber.options="--plugin json:target/cucumber.json --plugin pretty" \
+                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty" \
+                            -Dcucumber.publish.enabled=false \
                             -Dallure.results.directory=target/allure-results \
-                            -Dmaven.test.failure.ignore=true \
-                            -X
+                            -Dmaven.test.failure.ignore=true
 
-                            mkdir -p target/cucumber-reports
-                            if [ -f target/cucumber.json ]; then
-                                mv target/cucumber.json target/cucumber-reports/
-                                echo "✅ Cucumber raporu oluşturuldu"
-                            else
-                                echo "⚠️ Cucumber rapor dosyası bulunamadı"
-                            fi
-
-                            echo "📊 Test sonrası dizin yapısı:"
-                            ls -la target/
-                            ls -la target/cucumber-reports/ || echo "Cucumber rapor dizini bulunamadı"
-                            ls -la target/allure-results/ || echo "Allure rapor dizini bulunamadı"
+                            echo "📊 Rapor dosyaları kontrol ediliyor..."
+                            find target/cucumber-reports -name "*.json" -type f
+                            find target/allure-results -type f
                         '''
+
+                        // Cucumber JSON dosyasının varlığını kontrol et
+                        if (!fileExists('target/cucumber-reports/cucumber.json')) {
+                            error "Cucumber JSON rapor dosyası oluşturulamadı!"
+                        }
                     } catch (Exception e) {
                         echo """
                         ❌ Test Hatası
@@ -231,29 +221,15 @@ pipeline {
                         - Çalışma Dizini: ${pwd()}
                         - Platform: ${params.PLATFORM}
                         - Build No: ${env.BUILD_NUMBER}
+
+                        📋 Kontrol Listesi:
+                        1. pom.xml'de cucumber-reporting dependency var mı?
+                        2. Test sınıflarında @CucumberOptions doğru yapılandırılmış mı?
+                        3. target/cucumber-reports dizini oluşturulabildi mi?
                         """
 
                         currentBuild.result = 'FAILURE'
-                        error "Test çalıştırması başarısız: ${e.message}"
-                    }
-                }
-            }
-        }
-
-        stage('Generate Reports') {
-            steps {
-                script {
-                    try {
-                        allure([
-                            includeProperties: false,
-                            jdk: '',
-                            properties: [],
-                            reportBuildPolicy: 'ALWAYS',
-                            results: [[path: 'target/allure-results']]
-                        ])
-                    } catch (Exception e) {
-                        echo "❌ Rapor oluşturma hatası: ${e.message}"
-                        currentBuild.result = 'UNSTABLE'
+                        throw e
                     }
                 }
             }
@@ -263,17 +239,30 @@ pipeline {
     post {
         always {
             script {
+                // Appium'u durdur
                 sh 'pkill -f appium || true'
-                archiveArtifacts artifacts: '**/target/', allowEmptyArchive: true
 
-                sh '''
-                    rm -rf allure-report || true
-                    rm -rf allure-results || true
-                    rm -f allure-report.zip || true
-                    rm -rf ${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/archive/allure-report.zip || true
-                    rm -rf ${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/allure-report || true
-                '''
+                // Test sonuçlarını arşivle
+                archiveArtifacts artifacts: 'target/cucumber-reports/**, target/allure-results/**', allowEmptyArchive: true
 
+                // Cucumber raporu oluştur
+                cucumber buildStatus: 'UNSTABLE',
+                    reportTitle: 'Cucumber Report',
+                    fileIncludePattern: '**/cucumber.json',
+                    jsonReportDirectory: 'target/cucumber-reports',
+                    trendsLimit: 10,
+                    classifications: [
+                        [
+                            'key': 'Platform',
+                            'value': params.PLATFORM
+                        ],
+                        [
+                            'key': 'Branch',
+                            'value': env.BRANCH_NAME ?: 'unknown'
+                        ]
+                    ]
+
+                // Allure raporu oluştur
                 allure([
                     includeProperties: false,
                     jdk: '',
@@ -282,37 +271,12 @@ pipeline {
                     results: [[path: 'target/allure-results']]
                 ])
 
-                cucumber([
-                    buildStatus: 'UNSTABLE',
-                    reportTitle: 'Cucumber Report',
-                    fileIncludePattern: 'cucumber.json',
-                    jsonReportDirectory: 'target/cucumber-reports',
-                    sortingMethod: 'ALPHABETICAL',
-                    trendsLimit: 10,
-                    failedScenariosNumber: -1,
-                    failedFeaturesNumber: -1,
-                    failedStepsNumber: -1,
-                    skippedStepsNumber: -1,
-                    pendingStepsNumber: -1,
-                    undefinedStepsNumber: -1,
-                    classifications: [
-                        [
-                            'key': 'Platform',
-                            'value': params.PLATFORM
-                        ],
-                        [
-                            'key': 'Branch',
-                            'value': env.BRANCH_NAME
-                        ]
-                    ]
-                ])
-
                 cleanWs()
 
                 echo """
                 📊 Test Sonuçları:
                 📱 Platform: ${params.PLATFORM}
-                🌿 Branch: ${env.BRANCH_NAME}
+                🌿 Branch: ${env.BRANCH_NAME ?: 'unknown'}
                 ⚠️ Status: ${currentBuild.result}
                 """
             }
