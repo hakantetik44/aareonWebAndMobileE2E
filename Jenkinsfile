@@ -141,6 +141,7 @@ pipeline {
                         def platformTag = params.PLATFORM.toLowerCase()
                         sh """
                             echo "📂 Test Dizinleri Oluşturuluyor..."
+                            rm -rf target/cucumber-reports target/allure-results || true
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
