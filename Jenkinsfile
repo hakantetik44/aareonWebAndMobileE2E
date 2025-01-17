@@ -189,20 +189,11 @@ pipeline {
                 )
                 
                 allure([
-                    includeProperties: true,
+                    includeProperties: false,
                     jdk: '',
-                    properties: [
-                        [key: 'Platform', value: "${params.PLATFORM}"],
-                        [key: 'Browser', value: 'Mobile'],
-                        [key: 'Environment', value: 'Test'],
-                        [key: 'Branch', value: "${env.BRANCH_NAME ?: 'unknown'}"]
-                    ],
+                    properties: [],
                     reportBuildPolicy: 'ALWAYS',
-                    results: [[path: 'target/allure-results']],
-                    report: [
-                        enableHistory: true,
-                        processBackgroundSteps: false
-                    ]
+                    results: [[path: 'target/allure-results']]
                 ])
 
                 // Allure rapor dizinini arşivle
