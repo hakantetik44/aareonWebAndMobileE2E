@@ -8,15 +8,18 @@ import utils.ConfigReader;
 @RunWith(Cucumber.class)
 @CucumberOptions(
         plugin = {
-                "json:target/cucumber-reports/cucumber.json",
+                "json:target/cucumber.json",
                 "html:target/cucumber-reports/cucumber-reports.html",
                 "io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm",
-                "pretty"
+                "pretty",
+                "rerun:target/rerun.txt",
+                "timeline:target/timeline-reports"
         },
         features = "src/test/resources/features",
         glue = "stepDefinitions",
         dryRun = false,
-        tags = "${tags:@all}"
+        tags = "${tags:@all}",
+        monochrome = true
 )
 public class CukesRunner {
     static {

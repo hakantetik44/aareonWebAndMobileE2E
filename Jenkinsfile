@@ -4,12 +4,14 @@ pipeline {
     environment {
         ANDROID_HOME = '/Users/hakantetik/Library/Android/sdk'
         PATH = "${env.ANDROID_HOME}/platform-tools:${env.ANDROID_HOME}/tools:${env.PATH}"
+        ALLURE_HOME = tool 'Allure'
     }
 
     tools {
         maven 'maven'
         jdk 'JDK17'
         nodejs 'Node'
+        allure 'Allure'
     }
 
     parameters {
@@ -145,23 +147,43 @@ pipeline {
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
+                            echo "📋 Test Ortamı Bilgileri:"
+                            echo "Platform: ${params.PLATFORM}"
+                            echo "Tag: @${platformTag}"
+                            echo "Java Version:"
+                            java -version
+                            echo "Maven Version:"
+                            mvn -version
+                            
+                            echo "🔍 Test Dizini Kontrol:"
+                            ls -la src/test/resources/features/
+                            
                             echo "🧪 Démarrage des Tests..."
-                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}" -Dcucumber.execution.strict=false
+                            mvn clean test \
+                                -DplatformName=${params.PLATFORM} \
+                                -Dcucumber.filter.tags="@${platformTag}" \
+                                -Dcucumber.execution.strict=false \
+                                -Dcucumber.plugin="pretty,json:target/cucumber-reports/cucumber.json,html:target/cucumber-reports/cucumber-reports.html,io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm" \
+                                -X
+                        """
+
+                        echo "📊 Test Sonuçları Kontrol:"
+                        sh """
+                            echo "Cucumber Reports:"
+                            ls -la target/cucumber-reports/ || true
+                            echo "Allure Results:"
+                            ls -la target/allure-results/ || true
                         """
                     } catch (Exception e) {
                         echo """
-                            ⚠️ Résultats des Tests
-                            État: Certains tests ont échoué
-                            Plateforme: ${params.PLATFORM}
+                            ⚠️ Test Hatası:
+                            Hata Mesajı: ${e.message}
+                            Stack Trace: ${e.printStackTrace()}
+                            Platform: ${params.PLATFORM}
                             Build: ${BUILD_NUMBER}
-                            Note: Les problèmes connus sont signalés comme des avertissements
                         """
-                        // Don't fail the build for known issues
-                        if (e.message.contains('@known_issue')) {
-                            currentBuild.result = 'UNSTABLE'
-                        } else {
-                            throw e
-                        }
+                        currentBuild.result = 'UNSTABLE'
+                        error("Test çalıştırma hatası: ${e.message}")
                     }
                 }
             }
@@ -177,24 +199,62 @@ pipeline {
             script {
                 sh 'pkill -f appium || true'
                 
+                sh '''
+                    echo "🔍 Verifying test execution and reports..."
+                    ls -la target/ || true
+                    ls -la target/cucumber-reports/ || true
+                    echo "Test execution complete"
+                '''
+                
+                // Clean and prepare cucumber-reports directory
+                sh '''
+                    rm -rf target/cucumber-reports
+                    mkdir -p target/cucumber-reports
+                    if [ -f target/cucumber.json ]; then
+                        cp target/cucumber.json target/cucumber-reports/
+                    fi
+                '''
+                
                 cucumber(
-                    fileIncludePattern: '**/cucumber.json',
+                    fileIncludePattern: 'cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
-                    reportTitle: 'Résultats des Tests',
-                    buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'FAILURE',
-                    skipFailedTests: true,
-                    classificationsFilePattern: '**/classifications.properties',
+                    reportTitle: 'Aareon Mobile Test Results',
+                    buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'SUCCESS',
+                    classificationsFiles: ['config/classifications.properties'],
                     mergeFeaturesById: true,
-                    mergeFeaturesWithRetest: true
+                    mergeFeaturesWithRetest: true,
+                    failedFeaturesNumber: 999,
+                    failedScenariosNumber: 999,
+                    failedStepsNumber: 999,
+                    pendingStepsNumber: 999,
+                    skippedStepsNumber: 999,
+                    undefinedStepsNumber: 999
                 )
                 
+                // Archive the Cucumber reports
+                archiveArtifacts artifacts: 'target/cucumber-reports/**/*', allowEmptyArchive: true
+                
+                // Allure rapor dizinini temizle
+                sh 'rm -rf target/allure-report || true'
+                
+                // Allure raporu oluştur
                 allure([
-                    includeProperties: false,
+                    includeProperties: true,
                     jdk: '',
                     properties: [],
                     reportBuildPolicy: 'ALWAYS',
-                    results: [[path: 'target/allure-results']]
+                    results: [[path: 'target/allure-results']],
+                    report: 'target/allure-report'
                 ])
+
+                // Allure komut satırı ile raporu yeniden oluştur
+                sh """
+                    export PATH="${env.ALLURE_HOME}/bin:${env.PATH}"
+                    allure generate target/allure-results --clean -o target/allure-report
+                """
+
+                // Allure raporlarını arşivle
+                archiveArtifacts artifacts: 'target/allure-results/**/*.*,target/allure-report/**/*.*', fingerprint: true
 
                 echo """
                     📊 Résultats des Tests:
