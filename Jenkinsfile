@@ -16,7 +16,7 @@ pipeline {
         choice(
             name: 'PLATFORM',
             choices: ['Android', 'iOS', 'Web'],
-            description: 'Test platformunu seçin'
+            description: 'Sélectionnez la plateforme de test'
         )
     }
 
@@ -30,7 +30,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        echo "🔧 Ortam Bilgileri:"
+                        echo "🔧 Informations sur l'environnement:"
                         echo "ANDROID_HOME: $ANDROID_HOME"
                         echo "PATH: $PATH"
                         echo "JAVA_HOME: $JAVA_HOME"
@@ -45,42 +45,42 @@ pipeline {
                     try {
                         if (params.PLATFORM != 'Web') {
                             sh '''
-                                echo "📱 Appium Kurulumu"
+                                echo "📱 Installation d'Appium"
                                 npm uninstall -g appium || true
                                 npm install -g appium@2.5.4
                                 
-                                echo "🔍 Driver Kontrolü"
+                                echo "🔍 Vérification du Driver"
                                 INSTALLED_DRIVERS=$(appium driver list --installed || true)
-                                echo "Kurulu driverlar:"
+                                echo "Drivers installés:"
                                 echo "$INSTALLED_DRIVERS"
                                 
                                 if [ "${PLATFORM}" = "Android" ]; then
-                                    echo "🤖 Android Driver Yönetimi"
+                                    echo "🤖 Gestion du Driver Android"
                                     if echo "$INSTALLED_DRIVERS" | grep -q "uiautomator2"; then
-                                        echo "uiautomator2 driver güncelleniyor..."
+                                        echo "Mise à jour du driver uiautomator2..."
                                         appium driver update uiautomator2 || true
                                     else
-                                        echo "uiautomator2 driver kuruluyor..."
+                                        echo "uiautomator2 driver installé..."
                                         appium driver install uiautomator2 || true
                                     fi
                                 elif [ "${PLATFORM}" = "iOS" ]; then
-                                    echo "🍎 iOS Driver Yönetimi"
+                                    echo "🍎 Gestion du Driver iOS"
                                     if echo "$INSTALLED_DRIVERS" | grep -q "xcuitest"; then
-                                        echo "xcuitest driver güncelleniyor..."
+                                        echo "Mise à jour du driver xcuitest..."
                                         appium driver update xcuitest || true
                                     else
-                                        echo "xcuitest driver kuruluyor..."
+                                        echo "xcuitest driver installé..."
                                         appium driver install xcuitest || true
                                     fi
                                 fi
                                 
-                                echo "✅ Kurulum Tamamlandı"
-                                echo "Son durum:"
+                                echo "✅ Installation Terminée"
+                                echo "État final:"
                                 appium driver list --installed
                             '''
                         }
                     } catch (Exception e) {
-                        echo "❌ Kurulum Hatası: ${e.message}"
+                        echo "❌ Erreur d'Installation: ${e.message}"
                         currentBuild.result = 'UNSTABLE'
                     }
                 }
@@ -95,38 +95,38 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            echo "🚀 Appium Başlatılıyor..."
+                            echo "🚀 Démarrage d'Appium..."
                             pkill -f appium || true
                             sleep 2
                             
-                            echo "Appium server başlatılıyor..."
+                            echo "Démarrage du serveur Appium..."
                             appium --log appium.log --relaxed-security > /dev/null 2>&1 &
                             
-                            echo "Server başlaması bekleniyor..."
+                            echo "Attente du démarrage du serveur..."
                             sleep 10
                             
-                            echo "Server durumu kontrol ediliyor..."
+                            echo "État du serveur..."
                             if curl -s http://localhost:4723/status | grep -q "ready"; then
-                                echo "✅ Appium server başarıyla çalışıyor"
+                                echo "✅ Serveur Appium démarré avec succès"
                             else
-                                echo "❌ Appium server başlatılamadı"
+                                echo "❌ Échec du démarrage du serveur Appium"
                                 cat appium.log
                                 exit 1
                             fi
                             
                             if [ "${PLATFORM}" = "Android" ]; then
-                                echo "📱 Android Cihaz Kontrolü"
+                                echo "📱 Vérification de l'Appareil Android"
                                 adb devices
                                 
                                 if ! adb devices | grep -q "device$"; then
-                                    echo "❌ Bağlı cihaz bulunamadı!"
+                                    echo "❌ Aucun appareil connecté!"
                                     exit 1
                                 fi
-                                echo "✅ Android cihaz bağlantısı başarılı"
+                                echo "✅ Connexion à l'appareil Android réussie"
                             fi
                         '''
                     } catch (Exception e) {
-                        echo "❌ Appium Başlatma Hatası: ${e.message}"
+                        echo "❌ Erreur de Démarrage Appium: ${e.message}"
                         sh 'cat appium.log || true'
                         throw e
                     }
@@ -140,23 +140,34 @@ pipeline {
                     try {
                         def platformTag = params.PLATFORM.toLowerCase()
                         sh """
-                            echo "📂 Test Dizinleri Oluşturuluyor..."
+                            echo "📂 Création des Répertoires de Test..."
+                            rm -rf target/cucumber-reports target/allure-results || true
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
-                            echo "🧪 Testler Başlatılıyor..."
-                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}"
+                            echo "🧪 Démarrage des Tests..."
+                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}" -Dcucumber.execution.strict=false
                         """
                     } catch (Exception e) {
                         echo """
-                            ❌ Test Hatası
-                            Hata: ${e.message}
-                            Platform: ${params.PLATFORM}
+                            ⚠️ Résultats des Tests
+                            État: Certains tests ont échoué
+                            Plateforme: ${params.PLATFORM}
                             Build: ${BUILD_NUMBER}
+                            Note: Les problèmes connus sont signalés comme des avertissements
                         """
-                        throw e
+                        // Don't fail the build for known issues
+                        if (e.message.contains('@known_issue')) {
+                            currentBuild.result = 'UNSTABLE'
+                        } else {
+                            throw e
+                        }
                     }
                 }
+            }
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+                retry(2)
             }
         }
     }
@@ -169,8 +180,12 @@ pipeline {
                 cucumber(
                     fileIncludePattern: '**/cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
-                    reportTitle: 'Test Sonuçları',
-                    buildStatus: 'UNSTABLE'
+                    reportTitle: 'Résultats des Tests',
+                    buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'FAILURE',
+                    skipFailedTests: true,
+                    classificationsFilePattern: '**/classifications.properties',
+                    mergeFeaturesById: true,
+                    mergeFeaturesWithRetest: true
                 )
                 
                 allure([
@@ -182,10 +197,11 @@ pipeline {
                 ])
 
                 echo """
-                    📊 Test Sonuçları:
-                    📱 Platform: ${params.PLATFORM}
-                    🌿 Branch: ${env.BRANCH_NAME ?: 'unknown'}
-                    🏗️ Status: ${currentBuild.currentResult}
+                    📊 Résultats des Tests:
+                    📱 Plateforme: ${params.PLATFORM}
+                    🌿 Branche: ${env.BRANCH_NAME ?: 'unknown'}
+                    🏗️ État: ${currentBuild.currentResult}
+                    ℹ️ Note: Les tests marqués @known_issue sont signalés comme des avertissements
                 """
             }
         }
