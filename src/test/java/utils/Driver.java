@@ -17,8 +17,7 @@ public class Driver {
     public static AppiumDriver getAndroidDriver() {
         if (Android == null) {
             try {
-                String appiumUrl = System.getProperty("appium.server.url", "http://localhost:4723");
-                System.out.println("Démarrage du driver Android... Appium URL: " + appiumUrl);
+                System.out.println("Démarrage du driver Android...");
                 
                 UiAutomator2Options options = new UiAutomator2Options();
                 options.setPlatformName("Android");
@@ -31,15 +30,14 @@ public class Driver {
                 options.setNewCommandTimeout(Duration.ofSeconds(60));
                 options.setAdbExecTimeout(Duration.ofSeconds(60));
 
-                System.out.println("Connexion à Appium avec les options: " + options);
-                Android = new AppiumDriver(new URL(appiumUrl), options);
+                System.out.println("Connexion à Appium...");
+                Android = new AppiumDriver(new URL("http://127.0.0.1:4723"), options);
                 Android.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
                 System.out.println("Driver Android créé avec succès!");
 
             } catch (Exception e) {
                 System.err.println("Erreur lors de la création du driver Android: " + e.getMessage());
                 e.printStackTrace();
-                throw new RuntimeException("Impossible de créer le driver Android", e);
             }
         }
         return Android;
@@ -64,30 +62,23 @@ public class Driver {
             } catch (Exception e) {
                 System.err.println("Erreur lors de la création du driver iOS: " + e.getMessage());
                 e.printStackTrace();
-                throw new RuntimeException("Impossible de créer le driver iOS", e);
             }
         }
         return iOS;
     }
 
     public static WebDriver getCurrentDriver() {
-        String platform = System.getProperty("platformName");
-        if (platform == null) {
-            platform = ConfigReader.getProperty("platformName");
-        }
-        System.out.println("Plateforme actuelle: " + platform);
-
         try {
-            if ("Android".equalsIgnoreCase(platform)) {
+            if (OS.isAndroid()) {
                 return getAndroidDriver();
-            } else if ("iOS".equalsIgnoreCase(platform)) {
+            } else if (OS.isIOS()) {
                 return getIOSDriver();
             } else {
-                throw new IllegalStateException("Plateforme non supportée: " + platform);
+                throw new IllegalStateException("Système d'exploitation non supporté: " + OS.OS);
             }
         } catch (Exception e) {
             System.err.println("Erreur getCurrentDriver: " + e.getMessage());
-            throw new RuntimeException("Impossible d'initialiser le driver", e);
+            return null;
         }
     }
 

@@ -1,4 +1,4 @@
-@android
+
 Feature: Login Functionality
 
   Background:
