@@ -189,12 +189,27 @@ pipeline {
                 )
                 
                 allure([
-                    includeProperties: false,
+                    includeProperties: true,
                     jdk: '',
-                    properties: [],
+                    properties: [
+                        [key: 'Platform', value: "${params.PLATFORM}"],
+                        [key: 'Browser', value: 'Mobile'],
+                        [key: 'Environment', value: 'Test'],
+                        [key: 'Branch', value: "${env.BRANCH_NAME ?: 'unknown'}"]
+                    ],
                     reportBuildPolicy: 'ALWAYS',
-                    results: [[path: 'target/allure-results']]
+                    results: [[path: 'target/allure-results']],
+                    report: [
+                        enableHistory: true,
+                        processBackgroundSteps: false
+                    ]
                 ])
+
+                // Allure rapor dizinini arşivle
+                archiveArtifacts artifacts: 'target/allure-results/**/*.*', fingerprint: true
+                
+                // Allure rapor dizinini Jenkins'e kaydet
+                stash includes: 'target/allure-results/**/*', name: 'allure-results'
 
                 echo """
                     📊 Résultats des Tests:
