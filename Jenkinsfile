@@ -50,11 +50,23 @@ pipeline {
                                 npm install -g appium@2.5.4
                                 
                                 if [ "${PLATFORM}" = "Android" ]; then
-                                    echo "🤖 Android Driver Kurulumu"
-                                    appium driver install uiautomator2
+                                    echo "🤖 Android Driver Kontrolü"
+                                    if ! appium driver list --installed | grep -q "uiautomator2"; then
+                                        echo "uiautomator2 driver kuruluyor..."
+                                        appium driver install uiautomator2
+                                    else
+                                        echo "uiautomator2 driver zaten kurulu"
+                                        appium driver list --installed
+                                    fi
                                 elif [ "${PLATFORM}" = "iOS" ]; then
-                                    echo "🍎 iOS Driver Kurulumu"
-                                    appium driver install xcuitest
+                                    echo "🍎 iOS Driver Kontrolü"
+                                    if ! appium driver list --installed | grep -q "xcuitest"; then
+                                        echo "xcuitest driver kuruluyor..."
+                                        appium driver install xcuitest
+                                    else
+                                        echo "xcuitest driver zaten kurulu"
+                                        appium driver list --installed
+                                    fi
                                 fi
                                 
                                 echo "✅ Kurulum Tamamlandı"
@@ -78,16 +90,37 @@ pipeline {
                         sh '''
                             echo "🚀 Appium Başlatılıyor..."
                             pkill -f appium || true
-                            appium --log appium.log --relaxed-security &
+                            sleep 2
+                            
+                            echo "Appium server başlatılıyor..."
+                            appium --log appium.log --relaxed-security > /dev/null 2>&1 &
+                            
+                            echo "Server başlaması bekleniyor..."
                             sleep 10
+                            
+                            echo "Server durumu kontrol ediliyor..."
+                            if curl -s http://localhost:4723/status | grep -q "ready"; then
+                                echo "✅ Appium server başarıyla çalışıyor"
+                            else
+                                echo "❌ Appium server başlatılamadı"
+                                cat appium.log
+                                exit 1
+                            fi
                             
                             if [ "${PLATFORM}" = "Android" ]; then
                                 echo "📱 Android Cihaz Kontrolü"
                                 adb devices
+                                
+                                if ! adb devices | grep -q "device$"; then
+                                    echo "❌ Bağlı cihaz bulunamadı!"
+                                    exit 1
+                                fi
+                                echo "✅ Android cihaz bağlantısı başarılı"
                             fi
                         '''
                     } catch (Exception e) {
                         echo "❌ Appium Başlatma Hatası: ${e.message}"
+                        sh 'cat appium.log || true'
                         throw e
                     }
                 }
