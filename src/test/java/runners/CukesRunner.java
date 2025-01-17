@@ -8,7 +8,7 @@ import utils.ConfigReader;
 @RunWith(Cucumber.class)
 @CucumberOptions(
         plugin = {
-                "json:target/cucumber-reports/cucumber.json",
+                "json:target/cucumber.json",
                 "html:target/cucumber-reports/cucumber-reports.html",
                 "io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm",
                 "pretty",

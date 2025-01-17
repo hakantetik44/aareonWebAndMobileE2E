@@ -206,14 +206,17 @@ pipeline {
                     echo "Test execution complete"
                 '''
                 
-                // Ensure cucumber-reports directory exists
+                // Clean and prepare cucumber-reports directory
                 sh '''
+                    rm -rf target/cucumber-reports
                     mkdir -p target/cucumber-reports
-                    find target -name "*.json" -exec cp {} target/cucumber-reports/ \\;
+                    if [ -f target/cucumber.json ]; then
+                        cp target/cucumber.json target/cucumber-reports/
+                    fi
                 '''
                 
                 cucumber(
-                    fileIncludePattern: '**/*.json',
+                    fileIncludePattern: 'cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
                     reportTitle: 'Aareon Mobile Test Results',
                     buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'SUCCESS',
