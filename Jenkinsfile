@@ -199,6 +199,13 @@ pipeline {
             script {
                 sh 'pkill -f appium || true'
                 
+                sh '''
+                    echo "🔍 Verifying test execution and reports..."
+                    ls -la target/ || true
+                    ls -la target/cucumber-reports/ || true
+                    echo "Test execution complete"
+                '''
+                
                 cucumber(
                     fileIncludePattern: 'target/cucumber-reports/cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
