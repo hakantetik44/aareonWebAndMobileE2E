@@ -148,7 +148,14 @@ pipeline {
                             mkdir -p target/allure-results
 
                             echo "🧪 Démarrage des Tests..."
-                            mvn clean test -DplatformName=${params.PLATFORM} -Dcucumber.filter.tags="@${platformTag}" -Dcucumber.execution.strict=false -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,html:target/cucumber-reports/cucumber-reports.html,io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
+                            mvn clean test \
+                                -DplatformName=${params.PLATFORM} \
+                                -Dcucumber.filter.tags="@${platformTag}" \
+                                -Dcucumber.execution.strict=false \
+                                -Dcucumber.plugin="pretty,\
+                                json:target/cucumber-reports/cucumber.json,\
+                                html:target/cucumber-reports/cucumber-reports.html,\
+                                io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
                         """
                     } catch (Exception e) {
                         echo """
@@ -180,13 +187,19 @@ pipeline {
                 sh 'pkill -f appium || true'
                 
                 cucumber(
-                    fileIncludePattern: '**/cucumber.json',
+                    fileIncludePattern: 'target/cucumber-reports/cucumber.json',
                     jsonReportDirectory: 'target/cucumber-reports',
                     reportTitle: 'Résultats des Tests',
                     buildStatus: currentBuild.result == 'UNSTABLE' ? 'UNSTABLE' : 'SUCCESS',
                     classificationsFilePattern: '**/classifications.properties',
                     mergeFeaturesById: true,
-                    mergeFeaturesWithRetest: true
+                    mergeFeaturesWithRetest: true,
+                    failedFeaturesNumber: 999,
+                    failedScenariosNumber: 999,
+                    failedStepsNumber: 999,
+                    pendingStepsNumber: 999,
+                    skippedStepsNumber: 999,
+                    undefinedStepsNumber: 999
                 )
                 
                 // Allure rapor dizinini temizle
