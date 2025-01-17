@@ -190,14 +190,15 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh '''
+                        def platformTag = PLATFORM.toLowerCase()
+                        sh """
                             echo "🔧 Rapor dizinleri oluşturuluyor..."
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
                             echo "🚀 Testler başlatılıyor..."
-                            mvn clean test -DplatformName=${PLATFORM} -Dcucumber.filter.tags="@${PLATFORM.toLowerCase()}"
-                        '''
+                            mvn clean test -DplatformName=${PLATFORM} -Dcucumber.filter.tags="@${platformTag}"
+                        """
                     } catch (Exception e) {
                         echo """
                         ❌ Test Hatası

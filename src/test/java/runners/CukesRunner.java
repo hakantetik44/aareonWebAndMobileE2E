@@ -10,6 +10,7 @@ import utils.ConfigReader;
         plugin = {
                 "json:target/cucumber-reports/cucumber.json",
                 "html:target/cucumber-reports/cucumber-reports.html",
+                "io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm",
                 "pretty"
         },
         features = "src/test/resources/features",
