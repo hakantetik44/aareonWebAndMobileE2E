@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+        ANDROID_HOME = '/Users/hakantetik/Library/Android/sdk'
+        PATH = "${env.ANDROID_HOME}/platform-tools:${env.ANDROID_HOME}/tools:${env.PATH}"
+    }
+
     tools {
         maven 'maven'
         jdk 'JDK17'
@@ -30,6 +35,50 @@ pipeline {
             }
         }
 
+        stage('Android Ortam Kontrolü') {
+            when {
+                expression { params.PLATFORM == 'Android' }
+            }
+            steps {
+                script {
+                    try {
+                        sh '''
+                            echo "🔍 Android SDK kontrolü:"
+                            echo "ANDROID_HOME: $ANDROID_HOME"
+
+                            echo "📱 Bağlı cihazlar kontrol ediliyor..."
+                            adb version
+                            adb devices
+
+                            if ! adb devices | grep -q "device$"; then
+                                echo "❌ Hiç cihaz bulunamadı veya yetkisiz!"
+                                echo "📋 Kontrol edilecekler:"
+                                echo "1. Fiziksel cihaz bağlı mı?"
+                                echo "2. Cihazda USB hata ayıklama açık mı?"
+                                echo "3. Cihaz yetkili mi? (Cihaz ekranını kontrol edin)"
+                                exit 1
+                            fi
+
+                            echo "✅ Cihaz bağlantısı başarılı"
+                        '''
+                    } catch (Exception e) {
+                        echo """
+                        ❌ Android Ortam Hatası
+                        Hata: ${e.message}
+
+                        🔍 Kontrol Listesi:
+                        1. Android SDK kurulu mu? ($ANDROID_HOME)
+                        2. Platform Tools kurulu mu?
+                        3. adb çalışıyor mu?
+                        4. Jenkins kullanıcısının yetkileri var mı?
+                        """
+                        currentBuild.result = 'FAILURE'
+                        error "Android ortam kontrolü başarısız: ${e.message}"
+                    }
+                }
+            }
+        }
+
         stage('Setup Environment') {
             when {
                 expression { params.PLATFORM != 'Web' }
@@ -37,7 +86,6 @@ pipeline {
             steps {
                 script {
                     try {
-                        // Önce mevcut kurulumları temizle
                         sh '''
                             echo "Mevcut kurulumları temizleme..."
                             npm uninstall -g appium || true
@@ -45,24 +93,17 @@ pipeline {
                             rm -rf ~/.appium || true
                             rm -rf ~/.npm/_cacache || true
                             npm cache clean -f
-                        '''
 
-                        // Node ve npm versiyonlarını kontrol et
-                        sh '''
                             echo "Node ve npm versiyonları:"
                             node -v
                             npm -v
-                        '''
 
-                        // Appium'u kur
-                        sh '''
                             echo "Appium kurulumu yapılıyor..."
                             npm install -g appium@2.5.4
                             appium -v
                         '''
 
                         if (params.PLATFORM == 'Android') {
-                            // Android için uiautomator2 sürücüsünü kur
                             sh '''
                                 echo "uiautomator2 sürücüsü kuruluyor..."
                                 appium driver uninstall uiautomator2 || true
@@ -71,7 +112,6 @@ pipeline {
                                 appium driver list
                             '''
                         } else if (params.PLATFORM == 'iOS') {
-                            // iOS için xcuitest sürücüsünü kur
                             sh '''
                                 echo "xcuitest sürücüsü kuruluyor..."
                                 appium driver uninstall xcuitest || true
@@ -81,7 +121,6 @@ pipeline {
                             '''
                         }
 
-                        // Kurulum sonrası kontrol
                         sh '''
                             echo "Kurulum sonrası durum:"
                             echo "Appium versiyonu:"
@@ -89,19 +128,19 @@ pipeline {
                             echo "Kurulu sürücüler:"
                             appium driver list
                         '''
-                        
+
                     } catch (Exception e) {
                         echo """
                         ❌ Kurulum Hatası
                         Hata: ${e.message}
-                        
+
                         Sistem Bilgileri:
                         Node: ${sh(script: 'node -v || echo "Kurulu değil"', returnStdout: true).trim()}
                         NPM: ${sh(script: 'npm -v || echo "Kurulu değil"', returnStdout: true).trim()}
                         Kullanıcı: ${sh(script: 'whoami', returnStdout: true).trim()}
                         Dizin: ${sh(script: 'pwd', returnStdout: true).trim()}
                         """
-                        
+
                         currentBuild.result = 'FAILURE'
                         error "Kurulum başarısız: ${e.message}"
                     }
@@ -117,28 +156,28 @@ pipeline {
                 script {
                     try {
                         sh '''
-                            echo "Cleaning up existing Appium processes..."
+                            echo "Var olan Appium süreçleri temizleniyor..."
                             pkill -f appium || true
                             sleep 5
-                            
-                            echo "Starting Appium server..."
+
+                            echo "Appium server başlatılıyor..."
                             appium --allow-insecure chromedriver_autodownload -p 4723 --log-level debug --relaxed-security > appium.log 2>&1 &
-                            
-                            echo "Waiting for server to start..."
+
+                            echo "Server başlaması bekleniyor..."
                             sleep 30
-                            
-                            echo "Checking server status..."
-                            if curl -s http://localhost:4723/status; then
-                                echo "Appium server is running successfully"
+
+                            echo "Server durumu kontrol ediliyor..."
+                            if curl -s http://localhost:4723/status | grep -q "status.*0"; then
+                                echo "✅ Appium server başarıyla çalışıyor"
                             else
-                                echo "Appium server failed to start"
-                                echo "Appium logs:"
+                                echo "❌ Appium server başlatılamadı"
+                                echo "📄 Appium logları:"
                                 cat appium.log
                                 exit 1
                             fi
                         '''
                     } catch (Exception e) {
-                        echo "Start Appium Server stage failed: ${e.message}"
+                        echo "❌ Appium Server Hatası: ${e.message}"
                         sh 'cat appium.log || true'
                         currentBuild.result = 'FAILURE'
                         throw e
@@ -151,60 +190,49 @@ pipeline {
             steps {
                 script {
                     try {
-                        // Rapor dizinlerini oluştur
                         sh '''
                             echo "🔧 Rapor dizinleri oluşturuluyor..."
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
-                            
+
                             echo "📂 Dizin yapısı:"
                             ls -la target/
-                        '''
 
-                        // Maven versiyonunu kontrol et
-                        sh '''
                             echo "ℹ️ Maven bilgileri:"
                             mvn -v
-                        '''
 
-                        // Test komutu
-                        sh """
                             echo "🚀 Testler başlatılıyor..."
-                            
-                            # Maven debug modunda çalıştır
-                            set -x
                             mvn clean test \
-                            -Dplatform="${params.PLATFORM}" \
+                            -Dplatform="${PLATFORM}" \
                             -Dcucumber.options="--plugin json:target/cucumber.json --plugin pretty" \
                             -Dallure.results.directory=target/allure-results \
                             -Dmaven.test.failure.ignore=true \
                             -X
-                            
-                            # Rapor dizinlerini oluştur ve dosyaları taşı
+
                             mkdir -p target/cucumber-reports
                             if [ -f target/cucumber.json ]; then
                                 mv target/cucumber.json target/cucumber-reports/
-                                echo "✅ Cucumber raporu taşındı"
+                                echo "✅ Cucumber raporu oluşturuldu"
                             else
                                 echo "⚠️ Cucumber rapor dosyası bulunamadı"
                             fi
-                            
+
                             echo "📊 Test sonrası dizin yapısı:"
                             ls -la target/
                             ls -la target/cucumber-reports/ || echo "Cucumber rapor dizini bulunamadı"
                             ls -la target/allure-results/ || echo "Allure rapor dizini bulunamadı"
-                        """
+                        '''
                     } catch (Exception e) {
                         echo """
                         ❌ Test Hatası
                         Hata Mesajı: ${e.message}
-                        
+
                         🔍 Debug Bilgileri:
                         - Çalışma Dizini: ${pwd()}
                         - Platform: ${params.PLATFORM}
                         - Build No: ${env.BUILD_NUMBER}
                         """
-                        
+
                         currentBuild.result = 'FAILURE'
                         error "Test çalıştırması başarısız: ${e.message}"
                     }
@@ -224,7 +252,7 @@ pipeline {
                             results: [[path: 'target/allure-results']]
                         ])
                     } catch (Exception e) {
-                        echo "Report generation failed: ${e.message}"
+                        echo "❌ Rapor oluşturma hatası: ${e.message}"
                         currentBuild.result = 'UNSTABLE'
                     }
                 }
@@ -235,25 +263,17 @@ pipeline {
     post {
         always {
             script {
-                // Appium server'ı durdur
                 sh 'pkill -f appium || true'
-                
-                // Artifact'ları arşivle
                 archiveArtifacts artifacts: '**/target/', allowEmptyArchive: true
-                
-                // Eski Allure raporlarını temizle
+
                 sh '''
-                    # Workspace'deki raporları temizle
                     rm -rf allure-report || true
                     rm -rf allure-results || true
                     rm -f allure-report.zip || true
-                    
-                    # Jenkins build dizinindeki raporları temizle
                     rm -rf ${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/archive/allure-report.zip || true
                     rm -rf ${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/allure-report || true
                 '''
-                
-                // Allure raporu oluştur
+
                 allure([
                     includeProperties: false,
                     jdk: '',
@@ -261,8 +281,7 @@ pipeline {
                     reportBuildPolicy: 'ALWAYS',
                     results: [[path: 'target/allure-results']]
                 ])
-                
-                // Cucumber raporu oluştur
+
                 cucumber([
                     buildStatus: 'UNSTABLE',
                     reportTitle: 'Cucumber Report',
@@ -287,13 +306,11 @@ pipeline {
                         ]
                     ]
                 ])
-                
-                // Workspace'i temizle
+
                 cleanWs()
-                
-                // Test sonuçlarını göster
+
                 echo """
-                ❌ Test Sonuçları:
+                📊 Test Sonuçları:
                 📱 Platform: ${params.PLATFORM}
                 🌿 Branch: ${env.BRANCH_NAME}
                 ⚠️ Status: ${currentBuild.result}
