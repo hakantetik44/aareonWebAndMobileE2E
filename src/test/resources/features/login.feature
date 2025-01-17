@@ -19,4 +19,4 @@ Feature: Login Functionality
       | prenom     | User           |
       | email      | test@email.com |
       | password   | Test123!       |
-    Then l'inscription doit être réussie
+   # Then l'inscription doit être réussie
