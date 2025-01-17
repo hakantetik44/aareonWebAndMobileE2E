@@ -147,30 +147,43 @@ pipeline {
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
+                            echo "📋 Test Ortamı Bilgileri:"
+                            echo "Platform: ${params.PLATFORM}"
+                            echo "Tag: @${platformTag}"
+                            echo "Java Version:"
+                            java -version
+                            echo "Maven Version:"
+                            mvn -version
+                            
+                            echo "🔍 Test Dizini Kontrol:"
+                            ls -la src/test/resources/features/
+                            
                             echo "🧪 Démarrage des Tests..."
                             mvn clean test \
                                 -DplatformName=${params.PLATFORM} \
                                 -Dcucumber.filter.tags="@${platformTag}" \
                                 -Dcucumber.execution.strict=false \
-                                -Dcucumber.plugin="pretty,\
-                                json:target/cucumber-reports/cucumber.json,\
-                                html:target/cucumber-reports/cucumber-reports.html,\
-                                io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm"
+                                -Dcucumber.plugin="pretty,json:target/cucumber-reports/cucumber.json,html:target/cucumber-reports/cucumber-reports.html,io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm" \
+                                -X
+                        """
+
+                        echo "📊 Test Sonuçları Kontrol:"
+                        sh """
+                            echo "Cucumber Reports:"
+                            ls -la target/cucumber-reports/ || true
+                            echo "Allure Results:"
+                            ls -la target/allure-results/ || true
                         """
                     } catch (Exception e) {
                         echo """
-                            ⚠️ Résultats des Tests
-                            État: Certains tests ont échoué
-                            Plateforme: ${params.PLATFORM}
+                            ⚠️ Test Hatası:
+                            Hata Mesajı: ${e.message}
+                            Stack Trace: ${e.printStackTrace()}
+                            Platform: ${params.PLATFORM}
                             Build: ${BUILD_NUMBER}
-                            Note: Les problèmes connus sont signalés comme des avertissements
                         """
-                        // Don't fail the build for known issues
-                        if (e.message.contains('@known_issue')) {
-                            currentBuild.result = 'UNSTABLE'
-                        } else {
-                            currentBuild.result = 'UNSTABLE'
-                        }
+                        currentBuild.result = 'UNSTABLE'
+                        error("Test çalıştırma hatası: ${e.message}")
                     }
                 }
             }
