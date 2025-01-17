@@ -190,20 +190,28 @@ pipeline {
                     mergeFeaturesWithRetest: true
                 )
                 
-                script {
-                    // Allure komut satırı aracını kullanarak rapor oluştur
-                    sh """
-                        ${ALLURE_HOME}/bin/allure generate target/allure-results --clean -o target/allure-report
-                    """
-                }
-
+                // Allure rapor dizinini temizle
+                sh 'rm -rf target/allure-report || true'
+                
+                // Allure raporu oluştur
                 allure([
-                    includeProperties: false,
+                    includeProperties: true,
                     jdk: '',
-                    properties: [],
+                    properties: [
+                        [key: 'Platform', value: "${params.PLATFORM}"],
+                        [key: 'Browser', value: 'Mobile'],
+                        [key: 'Environment', value: 'Test'],
+                        [key: 'Branch', value: "${env.BRANCH_NAME ?: 'unknown'}"]
+                    ],
                     reportBuildPolicy: 'ALWAYS',
                     results: [[path: 'target/allure-results']]
                 ])
+
+                // Allure komut satırı ile raporu yeniden oluştur
+                sh """
+                    export PATH="${env.ALLURE_HOME}/bin:${env.PATH}"
+                    allure generate target/allure-results --clean -o target/allure-report
+                """
 
                 // Allure raporlarını arşivle
                 archiveArtifacts artifacts: 'target/allure-results/**/*.*,target/allure-report/**/*.*', fingerprint: true
