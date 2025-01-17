@@ -196,12 +196,27 @@ pipeline {
                             mkdir -p target/allure-results
 
                             echo "🚀 Testler başlatılıyor..."
-                            CUCUMBER_PUBLISH_TOKEN='' mvn clean test \
-                            -Dplatform="${PLATFORM}" \
-                            -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty" \
-                            -Dcucumber.publish.enabled=false \
-                            -Dallure.results.directory=target/allure-results \
-                            -Dmaven.test.failure.ignore=true
+                            if [ "${PLATFORM}" = "Android" ]; then
+                                echo "Android testleri başlatılıyor..."
+                                mvn clean test \
+                                    -DplatformName=Android \
+                                    -Dcucumber.filter.tags="@android" \
+                                    -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty" \
+                                    -Dappium.server.url=http://localhost:4723
+                            elif [ "${PLATFORM}" = "iOS" ]; then
+                                echo "iOS testleri başlatılıyor..."
+                                mvn clean test \
+                                    -DplatformName=iOS \
+                                    -Dcucumber.filter.tags="@ios" \
+                                    -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty" \
+                                    -Dappium.server.url=http://localhost:4723
+                            else
+                                echo "Web testleri başlatılıyor..."
+                                mvn clean test \
+                                    -DplatformName=Web \
+                                    -Dcucumber.filter.tags="@web" \
+                                    -Dcucumber.plugin="json:target/cucumber-reports/cucumber.json,pretty"
+                            fi
 
                             echo "📊 Rapor dosyaları kontrol ediliyor..."
                             find target/cucumber-reports -name "*.json" -type f
