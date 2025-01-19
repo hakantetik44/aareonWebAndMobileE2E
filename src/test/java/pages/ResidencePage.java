@@ -29,7 +29,7 @@ public class ResidencePage extends BasePage {
                 AppiumBy.accessibilityId("passwordInput");
         
         By loginButton = OS.isAndroid() ?
-                AppiumBy.xpath("//android.widget.Button") :
+                AppiumBy.xpath("//android.widget.Button[@text='CONNEXION']") :
                 AppiumBy.accessibilityId("loginButton");
 
         System.out.println("Saisie de l'email: " + email);
@@ -37,15 +37,77 @@ public class ResidencePage extends BasePage {
         emailField.click();
         emailField.clear();
         emailField.sendKeys(email);
+        hideKeyboard();
         
         System.out.println("Saisie du mot de passe: " + password);
         WebElement passwordField = findElement(passwordInput);
+        scrollToElement(passwordField);
         passwordField.click();
         passwordField.clear();
         passwordField.sendKeys(password);
+        hideKeyboard();
         
         System.out.println("Clic sur le bouton de connexion");
-        findElement(loginButton).click();
+        WebElement button = findElement(loginButton);
+        scrollToElement(button);
+        button.click();
+    }
+
+    private void hideKeyboard() {
+        if (OS.isAndroid()) {
+            try {
+                Thread.sleep(1000); // Wait longer for keyboard animation
+                try {
+                    ((io.appium.java_client.android.AndroidDriver) getCurrentDriver()).hideKeyboard();
+                } catch (Exception e1) {
+                    try {
+                        // Try pressing back button if hideKeyboard() fails
+                        getCurrentDriver().navigate().back();
+                    } catch (Exception e2) {
+                        System.out.println("Impossible de masquer le clavier via back button: " + e2.getMessage());
+                    }
+                }
+                Thread.sleep(500); // Wait after hiding keyboard
+            } catch (Exception e) {
+                System.out.println("Impossible de masquer le clavier: " + e.getMessage());
+            }
+        }
+    }
+
+    private void scrollToElement(WebElement element) {
+        if (OS.isAndroid()) {
+            try {
+                // First try UiScrollable
+                String elementText = element.getText();
+                if (elementText == null || elementText.isEmpty()) {
+                    elementText = element.getAttribute("content-desc");
+                }
+                
+                if (elementText != null && !elementText.isEmpty()) {
+                    try {
+                        ((io.appium.java_client.android.AndroidDriver) getCurrentDriver())
+                            .findElement(AppiumBy.androidUIAutomator(
+                                "new UiScrollable(new UiSelector().scrollable(true))" +
+                                ".setAsVerticalList().scrollIntoView(" +
+                                "new UiSelector().textContains(\"" + elementText + "\"))"
+                            ));
+                        return;
+                    } catch (Exception e) {
+                        System.out.println("Premier essai de défilement échoué: " + e.getMessage());
+                    }
+                }
+                
+                // If UiScrollable fails, try JavaScript scroll
+                String script = "arguments[0].scrollIntoView(true);";
+                ((io.appium.java_client.android.AndroidDriver) getCurrentDriver())
+                    .executeScript(script, element);
+                
+                Thread.sleep(500); // Wait for scroll to complete
+                
+            } catch (Exception e) {
+                System.out.println("Impossible de faire défiler jusqu'à l'élément: " + e.getMessage());
+            }
+        }
     }
 
     public boolean isErrorMessageDisplayed() {
@@ -143,50 +205,39 @@ public class ResidencePage extends BasePage {
                 AppiumBy.xpath("(//android.widget.EditText)[6]") :
                 AppiumBy.accessibilityId("confirmPasswordInput");
 
-        System.out.println("Saisie du numéro de contrat: " + userInfo.get("numContrat"));
-        WebElement contractField = findElement(numContratInput);
-        contractField.click();
-        contractField.clear();
-        contractField.sendKeys(userInfo.get("numContrat"));
-        
-        System.out.println("Saisie du nom: " + userInfo.get("nom"));
-        WebElement nameField = findElement(nomInput);
-        nameField.click();
-        nameField.clear();
-        nameField.sendKeys(userInfo.get("nom"));
-        
-        System.out.println("Saisie du prénom: " + userInfo.get("prenom"));
-        WebElement firstNameField = findElement(prenomInput);
-        firstNameField.click();
-        firstNameField.clear();
-        firstNameField.sendKeys(userInfo.get("prenom"));
-        
-        System.out.println("Saisie de l'email: " + userInfo.get("email"));
-        WebElement emailField = findElement(emailInput);
-        emailField.click();
-        emailField.clear();
-        emailField.sendKeys(userInfo.get("email"));
-        
-        System.out.println("Saisie du mot de passe: " + userInfo.get("password"));
-        WebElement passwordField = findElement(passwordInput);
-        passwordField.click();
-        passwordField.clear();
-        passwordField.sendKeys(userInfo.get("password"));
-        
-        WebElement confirmPasswordField = findElement(confirmPasswordInput);
-        confirmPasswordField.click();
-        confirmPasswordField.clear();
-        confirmPasswordField.sendKeys(userInfo.get("password"));
+        fillField(numContratInput, "numContrat", userInfo.get("numContrat"));
+        fillField(nomInput, "nom", userInfo.get("nom"));
+        fillField(prenomInput, "prenom", userInfo.get("prenom"));
+        fillField(emailInput, "email", userInfo.get("email"));
+        fillField(passwordInput, "password", userInfo.get("password"));
+        fillField(confirmPasswordInput, "confirmation du mot de passe", userInfo.get("password"));
+    }
+
+    private void fillField(By locator, String fieldName, String value) {
+        System.out.println("Saisie " + fieldName + ": " + value);
+        WebElement field = findElement(locator);
+        scrollToElement(field);
+        field.click();
+        field.clear();
+        field.sendKeys(value);
+        hideKeyboard();
+        try {
+            Thread.sleep(1000); // Wait longer for animations
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private WebElement findElement(By locator) {
         int maxAttempts = 3;
         int attempt = 0;
-        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(10));
+        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(15)); // Increased timeout
 
         while (attempt < maxAttempts) {
             try {
-                return wait.until(ExpectedConditions.elementToBeClickable(locator));
+                WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                wait.until(ExpectedConditions.elementToBeClickable(element));
+                return element;
             } catch (StaleElementReferenceException e) {
                 attempt++;
                 if (attempt == maxAttempts) {
