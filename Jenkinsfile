@@ -154,7 +154,7 @@ pipeline {
                             sh """
                                 cd /usr/local/lib/node_modules/appium-webdriveragent
                                 xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test &
-                                sleep 10
+                                sleep 30
                                 cd ${WORKSPACE}
                                 mvn clean test -DplatformName=ios
                             """

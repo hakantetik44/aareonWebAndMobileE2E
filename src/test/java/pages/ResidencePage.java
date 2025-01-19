@@ -247,7 +247,7 @@ public class ResidencePage extends BasePage {
         System.out.println("Saisie " + fieldName + ": " + value);
         WebElement field;
         try {
-            // Önce elementi bulmayı dene
+            // Essayer d'abord de trouver l'élément
             field = findElement(locator);
             field.click();
         } catch (Exception e) {
@@ -266,17 +266,17 @@ public class ResidencePage extends BasePage {
         field.clear();
         field.sendKeys(value);
         
-        // Her zaman klavyeyi kapatmaya gerek yok, sadece bir sonraki alan görünmüyorsa kapat
+        // Ne fermer le clavier que si le champ suivant n'est pas visible
         try {
-            // Bir sonraki alanın görünürlüğünü kontrol et
+            // Vérifier la visibilité du champ suivant
             getCurrentDriver().findElement(locator).isDisplayed();
         } catch (Exception e) {
-            // Bir sonraki alan görünmüyorsa klavyeyi kapat
+            // Si le champ suivant n'est pas visible, fermer le clavier
             hideKeyboard();
         }
         
         try {
-            Thread.sleep(500); // Kısa bir bekleme
+            Thread.sleep(500); // Courte pause
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
