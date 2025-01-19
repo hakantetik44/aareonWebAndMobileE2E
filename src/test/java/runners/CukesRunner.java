@@ -2,6 +2,7 @@ package runners;
 
 import io.cucumber.junit.Cucumber;
 import io.cucumber.junit.CucumberOptions;
+import io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm;
 import org.junit.runner.RunWith;
 import utils.ConfigReader;
 
@@ -13,7 +14,8 @@ import utils.ConfigReader;
                 "io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm",
                 "pretty",
                 "rerun:target/rerun.txt",
-                "timeline:target/timeline-reports"
+                "timeline:target/timeline-reports",
+                "json:target/cucumber-reports/CucumberTestReport.json"
         },
         features = "src/test/resources/features",
         glue = "stepDefinitions",
@@ -25,12 +27,15 @@ public class CukesRunner {
         String platform = System.getProperty("platformName", ConfigReader.getProperty("platformName", "android")).toLowerCase();
         String tags = "";
         
+        // Set platform for Allure environment
+        System.setProperty("allure.environment.platform", platform.toUpperCase());
+        
         switch (platform) {
             case "android":
-                tags = "@android or @mobile";
+                tags = "@android";
                 break;
             case "ios":
-                tags = "@ios or @mobile";
+                tags = "@ios";
                 break;
             case "web":
                 tags = "@web";
