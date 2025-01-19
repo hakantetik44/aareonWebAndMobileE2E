@@ -89,25 +89,6 @@ pipeline {
             }
         }
 
-        stage('Start WebDriverAgent') {
-            when {
-                expression { params.PLATFORM.toLowerCase() == 'ios' }
-            }
-            steps {
-                script {
-                    echo "🔧 Démarrage de WebDriverAgent..."
-                    sh '''
-                        # Kill any existing process using port 8100
-                        lsof -i :8100 | grep LISTEN | awk '{print $2}' | xargs kill -9 || true
-                        sleep 2
-                        
-                        cd /usr/local/lib/node_modules/appium-webdriveragent
-                        xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test
-                    '''
-                }
-            }
-        }
-
         stage('Start Appium') {
             when {
                 expression { params.PLATFORM != 'Web' }
@@ -151,6 +132,21 @@ pipeline {
                         sh 'cat appium.log || true'
                         throw e
                     }
+                }
+            }
+        }
+
+        stage('Start WebDriverAgent') {
+            when {
+                expression { params.PLATFORM.toLowerCase() == 'ios' }
+            }
+            steps {
+                script {
+                    echo "🔧 Démarrage de WebDriverAgent..."
+                    sh '''
+                        cd /usr/local/lib/node_modules/appium-webdriveragent
+                        xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test
+                    '''
                 }
             }
         }
