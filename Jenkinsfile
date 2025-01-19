@@ -145,7 +145,9 @@ pipeline {
                     echo "🔧 Démarrage de WebDriverAgent..."
                     sh '''
                         cd /usr/local/lib/node_modules/appium-webdriveragent
-                        xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test
+                        xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test &
+                        echo "⏳ Attente de 40 secondes pour WebDriverAgent..."
+                        sleep 40
                     '''
                 }
             }
