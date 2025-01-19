@@ -1,0 +1,2 @@
+testName,featureName,status,duration,timestamp,platform
+Test d'inscription d'un nouvel utilisateur,file:///Users/hakantetik/IdeaProjects/aareonWebAndMobileE2E/src/test/resources/features/login.feature,FAILED,8316,2025-01-19T13:28:10.835214,

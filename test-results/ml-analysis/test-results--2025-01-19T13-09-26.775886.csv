@@ -1,0 +1,3 @@
+testName,featureName,status,duration,timestamp,platform
+Test de connexion avec email incorrect,file:///Users/hakantetik/IdeaProjects/aareonWebAndMobileE2E/src/test/resources/features/login.feature,FAILED,26923,2025-01-19T13:09:21.159751,
+Test d'inscription d'un nouvel utilisateur,file:///Users/hakantetik/IdeaProjects/aareonWebAndMobileE2E/src/test/resources/features/login.feature,FAILED,5535,2025-01-19T13:09:26.711262,

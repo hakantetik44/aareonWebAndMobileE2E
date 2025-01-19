@@ -18,12 +18,11 @@ import utils.ConfigReader;
         features = "src/test/resources/features",
         glue = "stepDefinitions",
         dryRun = false,
-        tags = "${tags:@all}",
         monochrome = true
 )
 public class CukesRunner {
     static {
-        String platform = ConfigReader.getProperty("platformName", "android").toLowerCase();
+        String platform = System.getProperty("platformName", ConfigReader.getProperty("platformName", "android")).toLowerCase();
         String tags = "";
         
         switch (platform) {
@@ -40,6 +39,6 @@ public class CukesRunner {
                 tags = "@all";
         }
         
-        System.setProperty("tags", tags);
+        System.setProperty("cucumber.filter.tags", tags);
     }
 }

@@ -17,10 +17,26 @@ public class Driver {
     public static AppiumDriver iOS;
     public static WebDriver Web;
 
+    public static WebDriver getCurrentDriver() {
+        String platform = System.getProperty("platformName", "android").toLowerCase();
+        System.out.println("Getting driver for platform: " + platform);
+        
+        switch (platform) {
+            case "android":
+                return getAndroidDriver();
+            case "ios":
+                return getIOSDriver();
+            case "web":
+                return getWebDriver();
+            default:
+                throw new RuntimeException("Platform not supported: " + platform);
+        }
+    }
+
     public static WebDriver getWebDriver() {
         if (Web == null) {
             try {
-                System.out.println("Démarrage du driver Web...");
+                System.out.println("Starting Web driver...");
                 ChromeOptions options = new ChromeOptions();
                 options.addArguments("--start-maximized");
                 options.addArguments("--remote-allow-origins=*");
@@ -28,9 +44,9 @@ public class Driver {
                 Web = new ChromeDriver(options);
                 Web.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
                 Web.manage().window().maximize();
-                System.out.println("Driver Web créé avec succès!");
+                System.out.println("Web driver created successfully!");
             } catch (Exception e) {
-                System.err.println("Erreur lors de la création du driver Web: " + e.getMessage());
+                System.err.println("Error creating Web driver: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -40,26 +56,26 @@ public class Driver {
     public static AppiumDriver getAndroidDriver() {
         if (Android == null) {
             try {
-                System.out.println("Démarrage du driver Android...");
+                System.out.println("Starting Android driver...");
                 
                 UiAutomator2Options options = new UiAutomator2Options();
-                options.setPlatformName("Android");
-                options.setAutomationName("UiAutomator2");
-                options.setDeviceName("emulator-5554");
-                options.setAppPackage("fr.aareon.lesresidences.bis");
-                options.setAppActivity("fr.aareon.lesresidences.bis.MainActivity");
-                options.setNoReset(false);  
+                options.setPlatformName("ANDROID");
+                options.setAutomationName(ConfigReader.getProperty("androidAutomationName"));
+                options.setDeviceName(ConfigReader.getProperty("androidDeviceName"));
+                options.setAppPackage(ConfigReader.getProperty("androidAppPackage"));
+                options.setAppActivity(ConfigReader.getProperty("androidAppActivity"));
+                options.setNoReset(true);
                 options.setAutoGrantPermissions(true);
                 options.setNewCommandTimeout(Duration.ofSeconds(60));
                 options.setAdbExecTimeout(Duration.ofSeconds(60));
 
-                System.out.println("Connexion à Appium...");
-                Android = new AppiumDriver(new URL("http://127.0.0.1:4723"), options);
+                System.out.println("Connecting to Appium...");
+                Android = new AppiumDriver(new URL(ConfigReader.getProperty("appiumServerURL")), options);
                 Android.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
-                System.out.println("Driver Android créé avec succès!");
+                System.out.println("Android driver created successfully!");
 
             } catch (Exception e) {
-                System.err.println("Erreur lors de la création du driver Android: " + e.getMessage());
+                System.err.println("Error creating Android driver: " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -69,70 +85,45 @@ public class Driver {
     public static AppiumDriver getIOSDriver() {
         if (iOS == null) {
             try {
-                XCUITestOptions options = new XCUITestOptions()
-                        .setPlatformName("iOS")
-                        .setAutomationName("XCUITest")
-                        .setPlatformVersion("16.0")
-                        .setDeviceName("iPhone 14")
-                        .setBundleId("fr.aareon.lesresidences.bis")
+                System.out.println("Starting iOS driver...");
+                XCUITestOptions options = new XCUITestOptions();
+                options.setPlatformName("iOS")
+                        .setAutomationName(ConfigReader.getProperty("iosAutomationName"))
+                        .setPlatformVersion(ConfigReader.getProperty("iosPlatformVersion"))
+                        .setDeviceName(ConfigReader.getProperty("iosDeviceName"))
+                        .setUdid(ConfigReader.getProperty("iosDeviceUDID"))
+                        .setBundleId(ConfigReader.getProperty("iosBundleId"))
                         .setNoReset(true)
                         .setAutoAcceptAlerts(true);
+                options.setCapability("showXcodeLog", true);
+                options.setCapability("wdaLocalPort", 8100);
+                options.setCapability("webDriverAgentUrl", "http://192.168.1.4:8100");
 
-                iOS = new AppiumDriver(new URL("http://127.0.0.1:4723"), options);
+                System.out.println("Connecting to Appium...");
+                iOS = new AppiumDriver(new URL(ConfigReader.getProperty("appiumServerURL")), options);
                 iOS.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
-                System.out.println("iOS driver créé avec succès!");
+                System.out.println("iOS driver created successfully!");
 
             } catch (Exception e) {
-                System.err.println("Erreur lors de la création du driver iOS: " + e.getMessage());
+                System.err.println("Error creating iOS driver: " + e.getMessage());
                 e.printStackTrace();
             }
         }
         return iOS;
     }
 
-    public static WebDriver getCurrentDriver() {
-        try {
-            if (OS.isAndroid()) {
-                return getAndroidDriver();
-            } else if (OS.isIOS()) {
-                return getIOSDriver();
-            } else if (OS.isWeb()) {
-                return getWebDriver();
-            } else {
-                throw new IllegalStateException("Système d'exploitation non supporté: " + OS.OS);
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur getCurrentDriver: " + e.getMessage());
-            return null;
-        }
-    }
-
     public static void closeDriver() {
-        try {
-            if (iOS != null) {
-                iOS.quit();
-                iOS = null;
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la fermeture du driver iOS: " + e.getMessage());
+        if (Android != null) {
+            Android.quit();
+            Android = null;
         }
-
-        try {
-            if (Android != null) {
-                Android.quit();
-                Android = null;
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la fermeture du driver Android: " + e.getMessage());
+        if (iOS != null) {
+            iOS.quit();
+            iOS = null;
         }
-
-        try {
-            if (Web != null) {
-                Web.quit();
-                Web = null;
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la fermeture du driver Web: " + e.getMessage());
+        if (Web != null) {
+            Web.quit();
+            Web = null;
         }
     }
 }

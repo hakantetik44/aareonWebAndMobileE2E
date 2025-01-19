@@ -140,34 +140,37 @@ pipeline {
             steps {
                 script {
                     try {
-                        def platformTag = params.PLATFORM.toLowerCase()
+                        def platformName = params.PLATFORM.toLowerCase()
+                        
+                        echo "📂 Creating Test Directories..."
                         sh """
-                            echo "📂 Création des Répertoires de Test..."
                             rm -rf target/cucumber-reports target/allure-results || true
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
-
-                            echo "📋 Informations sur l'Environnement de Test:"
-                            echo "Platform: ${params.PLATFORM}"
-                            echo "Tag: @${platformTag}"
-                            echo "Java Version:"
-                            java -version
-                            echo "Maven Version:"
-                            mvn -version
-                            
-                            echo "🔍 Vérification du Répertoire de Tests:"
-                            ls -la src/test/resources/features/
-                            
-                            echo "🧪 Démarrage des Tests..."
-                            mvn clean test \
-                                -DplatformName=${params.PLATFORM} \
-                                -Dcucumber.filter.tags="@${platformTag}" \
-                                -Dcucumber.execution.strict=false \
-                                -Dcucumber.plugin="pretty,json:target/cucumber-reports/cucumber.json,html:target/cucumber-reports/cucumber-reports.html,io.qameta.allure.cucumber7jvm.AllureCucumber7Jvm" \
-                                -X
                         """
 
-                        echo "📊 Vérification des Résultats:"
+                        if (platformName == 'ios') {
+                            echo "🍎 Running iOS Tests..."
+                            sh """
+                                cd /usr/local/lib/node_modules/appium-webdriveragent
+                                xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test &
+                                sleep 10
+                                cd ${WORKSPACE}
+                                mvn clean test -DplatformName=ios
+                            """
+                        } else if (platformName == 'android') {
+                            echo "🤖 Running Android Tests..."
+                            sh """
+                                mvn clean test -DplatformName=android
+                            """
+                        } else {
+                            echo "🌐 Running Web Tests..."
+                            sh """
+                                mvn clean test -DplatformName=web
+                            """
+                        }
+
+                        echo "📊 Checking Test Results:"
                         sh """
                             echo "Cucumber Reports:"
                             ls -la target/cucumber-reports/ || true
@@ -176,14 +179,14 @@ pipeline {
                         """
                     } catch (Exception e) {
                         echo """
-                            ⚠️ Erreur de Test:
-                            Message d'Erreur: ${e.message}
+                            ⚠️ Test Error:
+                            Error Message: ${e.message}
                             Stack Trace: ${e.printStackTrace()}
                             Platform: ${params.PLATFORM}
                             Build: ${BUILD_NUMBER}
                         """
                         currentBuild.result = 'UNSTABLE'
-                        error("Erreur d'exécution du test: ${e.message}")
+                        error("Test execution error: ${e.message}")
                     }
                 }
             }
