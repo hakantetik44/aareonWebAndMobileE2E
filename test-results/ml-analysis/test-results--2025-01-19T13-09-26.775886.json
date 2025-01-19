@@ -1,0 +1,15 @@
+[ {
+  "testName" : "Test de connexion avec email incorrect",
+  "featureName" : "file:///Users/hakantetik/IdeaProjects/aareonWebAndMobileE2E/src/test/resources/features/login.feature",
+  "status" : "FAILED",
+  "duration" : 26923,
+  "timestamp" : "2025-01-19T13:09:21.159751",
+  "platform" : ""
+}, {
+  "testName" : "Test d'inscription d'un nouvel utilisateur",
+  "featureName" : "file:///Users/hakantetik/IdeaProjects/aareonWebAndMobileE2E/src/test/resources/features/login.feature",
+  "status" : "FAILED",
+  "duration" : 5535,
+  "timestamp" : "2025-01-19T13:09:26.711262",
+  "platform" : ""
+} ]

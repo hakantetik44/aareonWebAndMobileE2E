@@ -1,0 +1,17 @@
+Test Analiz Raporu - Platform: 
+=================
+
+Test Başarı Oranları:
+Başarılı: 0,00%
+Başarısız: 0,00%
+Atlanmış: 0,00%
+
+Test Süre İstatistikleri:
+Ortalama: 5734,50 ms
+Standart Sapma: 564,98 ms
+Medyan: 5734,50 ms
+1. Çeyrek: 5335,00 ms
+3. Çeyrek: 6134,00 ms
+
+Anormal Süreli Testler:
+Anormal süreli test bulunamadı.
