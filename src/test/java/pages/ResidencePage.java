@@ -47,7 +47,7 @@ public class ResidencePage extends BasePage {
         passwordField.sendKeys(password);
         hideKeyboard();
         
-        // Klavyenin tamamen kapandığından emin olmak için biraz bekle
+        // Attendre que le clavier soit complètement fermé
         try {
             Thread.sleep(1500);
         } catch (InterruptedException e) {
@@ -71,7 +71,7 @@ public class ResidencePage extends BasePage {
                         // Try pressing back button if hideKeyboard() fails
                         getCurrentDriver().navigate().back();
                     } catch (Exception e2) {
-                        System.out.println("Impossible de masquer le clavier via back button: " + e2.getMessage());
+                        System.out.println("Impossible de masquer le clavier via le bouton retour: " + e2.getMessage());
                     }
                 }
                 Thread.sleep(500); // Wait after hiding keyboard
@@ -80,15 +80,15 @@ public class ResidencePage extends BasePage {
             }
         } else {
             try {
-                // iOS için klavye kapatma işlemi
+                // Processus de fermeture du clavier pour iOS
                 Thread.sleep(1000);
                 try {
-                    // Önce 'Done' butonuna tıklamayı dene
+                    // Essayer d'abord de cliquer sur le bouton 'Terminé'
                     By doneButton = AppiumBy.xpath("//XCUIElementTypeButton[@name='Done' or @name='Terminé']");
                     getCurrentDriver().findElement(doneButton).click();
                 } catch (Exception e1) {
                     try {
-                        // Done butonu bulunamazsa, ekranın boş bir yerine tıkla
+                        // Si le bouton 'Terminé' n'est pas trouvé, cliquer sur une zone vide
                         By emptyArea = AppiumBy.xpath("//XCUIElementTypeApplication");
                         getCurrentDriver().findElement(emptyArea).click();
                     } catch (Exception e2) {
@@ -245,14 +245,38 @@ public class ResidencePage extends BasePage {
 
     private void fillField(By locator, String fieldName, String value) {
         System.out.println("Saisie " + fieldName + ": " + value);
-        WebElement field = findElement(locator);
-        scrollToElement(field);
-        field.click();
+        WebElement field;
+        try {
+            // Önce elementi bulmayı dene
+            field = findElement(locator);
+            field.click();
+        } catch (Exception e) {
+            // Élément non trouvé ou non cliquable, fermer le clavier et réessayer
+            System.out.println("Élément non visible, fermeture du clavier et nouvelle tentative...");
+            hideKeyboard();
+            try {
+                Thread.sleep(1000); // Attendre la fermeture du clavier
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            field = findElement(locator);
+            field.click();
+        }
+
         field.clear();
         field.sendKeys(value);
-        hideKeyboard();
+        
+        // Her zaman klavyeyi kapatmaya gerek yok, sadece bir sonraki alan görünmüyorsa kapat
         try {
-            Thread.sleep(1000); // Wait longer for animations
+            // Bir sonraki alanın görünürlüğünü kontrol et
+            getCurrentDriver().findElement(locator).isDisplayed();
+        } catch (Exception e) {
+            // Bir sonraki alan görünmüyorsa klavyeyi kapat
+            hideKeyboard();
+        }
+        
+        try {
+            Thread.sleep(500); // Kısa bir bekleme
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -261,12 +285,17 @@ public class ResidencePage extends BasePage {
     private WebElement findElement(By locator) {
         int maxAttempts = 3;
         int attempt = 0;
-        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(15)); // Increased timeout
+        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(15));
 
         while (attempt < maxAttempts) {
             try {
                 WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                // Elementi görünür ve tıklanabilir olana kadar bekle
                 wait.until(ExpectedConditions.elementToBeClickable(element));
+                // Elementin görünür olduğundan emin ol
+                if (!element.isDisplayed()) {
+                    scrollToElement(element);
+                }
                 return element;
             } catch (StaleElementReferenceException e) {
                 attempt++;
