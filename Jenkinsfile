@@ -147,7 +147,7 @@ pipeline {
                             mkdir -p target/cucumber-reports
                             mkdir -p target/allure-results
 
-                            echo "📋 Test Ortamı Bilgileri:"
+                            echo "📋 Informations sur l'Environnement de Test:"
                             echo "Platform: ${params.PLATFORM}"
                             echo "Tag: @${platformTag}"
                             echo "Java Version:"
@@ -155,7 +155,7 @@ pipeline {
                             echo "Maven Version:"
                             mvn -version
                             
-                            echo "🔍 Test Dizini Kontrol:"
+                            echo "🔍 Vérification du Répertoire de Tests:"
                             ls -la src/test/resources/features/
                             
                             echo "🧪 Démarrage des Tests..."
@@ -167,7 +167,7 @@ pipeline {
                                 -X
                         """
 
-                        echo "📊 Test Sonuçları Kontrol:"
+                        echo "📊 Vérification des Résultats:"
                         sh """
                             echo "Cucumber Reports:"
                             ls -la target/cucumber-reports/ || true
@@ -176,14 +176,14 @@ pipeline {
                         """
                     } catch (Exception e) {
                         echo """
-                            ⚠️ Test Hatası:
-                            Hata Mesajı: ${e.message}
+                            ⚠️ Erreur de Test:
+                            Message d'Erreur: ${e.message}
                             Stack Trace: ${e.printStackTrace()}
                             Platform: ${params.PLATFORM}
                             Build: ${BUILD_NUMBER}
                         """
                         currentBuild.result = 'UNSTABLE'
-                        error("Test çalıştırma hatası: ${e.message}")
+                        error("Erreur d'exécution du test: ${e.message}")
                     }
                 }
             }
@@ -234,10 +234,10 @@ pipeline {
                 // Archive the Cucumber reports
                 archiveArtifacts artifacts: 'target/cucumber-reports/**/*', allowEmptyArchive: true
                 
-                // Allure rapor dizinini temizle
+                // Nettoyer le répertoire des rapports Allure
                 sh 'rm -rf target/allure-report || true'
                 
-                // Allure raporu oluştur
+                // Générer le rapport Allure
                 allure([
                     includeProperties: true,
                     jdk: '',
@@ -247,13 +247,13 @@ pipeline {
                     report: 'target/allure-report'
                 ])
 
-                // Allure komut satırı ile raporu yeniden oluştur
+                // Régénérer le rapport avec la ligne de commande Allure
                 sh """
                     export PATH="${env.ALLURE_HOME}/bin:${env.PATH}"
                     allure generate target/allure-results --clean -o target/allure-report
                 """
 
-                // Allure raporlarını arşivle
+                // Archiver les rapports Allure
                 archiveArtifacts artifacts: 'target/allure-results/**/*.*,target/allure-report/**/*.*', fingerprint: true
 
                 echo """
