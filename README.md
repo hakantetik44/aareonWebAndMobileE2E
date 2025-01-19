@@ -91,48 +91,66 @@ iosDeviceName=iPhone 14
 
 ### 🎯 Tous les tests
 ```bash
-mvn clean test
+mvn clean test -Dcucumber.filter.tags="@all"
 ```
 
-### 🌐 Tests Web uniquement
+### 🌐 Tests Web
 ```bash
-mvn test -Dplatform=web
+mvn test -Dplatform=web -Dcucumber.filter.tags="@web"
 ```
 
-### 📱 Tests Mobile par plateforme
+### 📱 Tests Mobile
 ```bash
 # Android
-mvn test -Dplatform=android
+mvn test -Dplatform=android -Dcucumber.filter.tags="@android"
 
 # iOS
-mvn test -Dplatform=ios
+mvn test -Dplatform=ios -Dcucumber.filter.tags="@ios"
 ```
 
-### 🏷️ Tests par fonctionnalité
+### 🏷️ Tests par Module
 ```bash
-mvn test -Dcucumber.filter.tags="@login or @registration"
+# Tests de connexion
+mvn test -Dcucumber.filter.tags="@connexion"
+
+# Tests d'inscription
+mvn test -Dcucumber.filter.tags="@inscription"
+
+# Tests de paiement
+mvn test -Dcucumber.filter.tags="@paiement"
 ```
 
-## 📊 Rapports
-Les rapports détaillés sont générés pour chaque plateforme :
-- 📈 **Allure** : `target/allure-results`
-  - Vue d'ensemble des tests
-  - Screenshots des erreurs
-  - Temps d'exécution
-  - Métriques de qualité
-- 📑 **Cucumber** : `target/cucumber-reports`
-  - Rapports HTML
-  - Rapports JSON
-  - Rapports XML
+## 📊 Rapports et Analyses
+
+### 📈 Rapports Allure
+Les rapports Allure sont générés automatiquement dans `target/allure-results` et incluent :
+- Vue d'ensemble des tests
+- Captures d'écran des erreurs
+- Temps d'exécution détaillé
+- Métriques de qualité
+- Historique des exécutions
 
 Pour visualiser les rapports :
 ```bash
-# Allure
 allure serve target/allure-results
+```
 
-# Cucumber (ouvre le rapport HTML)
+### 📑 Rapports Cucumber
+Les rapports Cucumber sont disponibles dans `target/cucumber-reports` :
+- Rapports HTML interactifs
+- Rapports JSON pour intégration CI/CD
+- Rapports XML pour analyse de tendances
+
+Pour ouvrir le rapport HTML :
+```bash
 open target/cucumber-reports/index.html
 ```
+
+### 📊 Métriques de Test
+- Taux de réussite par module
+- Temps d'exécution moyen
+- Couverture des fonctionnalités
+- Points sensibles identifiés
 
 ## 🔄 Intégration Continue (CI/CD)
 

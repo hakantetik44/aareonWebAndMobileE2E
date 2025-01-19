@@ -1,4 +1,4 @@
-Feature: Login Functionality
+Feature: Fonctionnalité de Connexion et d'Inscription
 
   Background:
     Given l'application Les Residences est ouverte
