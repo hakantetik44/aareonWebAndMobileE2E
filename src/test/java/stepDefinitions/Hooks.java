@@ -18,38 +18,44 @@ public class Hooks {
     @Before
     public void setUp(Scenario scenario) {
         this.scenario = scenario;
-        // Get platform from system property or config
         this.platform = System.getProperty("platformName", ConfigReader.getProperty("platformName", "android")).toLowerCase();
         
-        // Add platform information to Cucumber report
-        scenario.log("Test Platform: " + platform.toUpperCase());
+        // Ajouter le nom de la plateforme au titre du scénario
+        String platformName = platform.substring(0, 1).toUpperCase() + platform.substring(1);
+        String originalName = scenario.getName();
+        String newName = originalName + " - " + platformName;
         
-        // Add platform information to Allure report
+        // Ajouter des informations sur la plateforme
+        scenario.log("Plateforme de test: " + platform.toUpperCase());
         Allure.label("platform", platform);
-        Allure.description("Test Platform: " + platform.toUpperCase() + "\n" + scenario.getName());
+        Allure.description("Plateforme de test: " + platform.toUpperCase() + "\n" + newName);
         
-        System.out.println("Test starting - Platform: " + platform);
+        System.out.println("\n=== Nouveau Scénario Commence: " + newName + " ===");
+        System.out.println("Plateforme: " + platform);
+        
+        // Démarrer l'application pour ce scénario
+        startApplication();
     }
 
-    @Given("l'application Les Residences est ouverte")
-    public void verifierApplicationOuverte() {
+    private void startApplication() {
         try {
-            System.out.println("Starting application on " + platform);
+            System.out.println("Démarrage de l'application pour le scénario - Plateforme: " + platform);
             
-            // Get the appropriate driver based on platform
             WebDriver driver = Driver.getCurrentDriver();
             if (driver == null) {
-                throw new RuntimeException("Driver could not be initialized for platform: " + platform);
+                throw new RuntimeException("Impossible de démarrer le driver - Plateforme: " + platform);
             }
             
-            // Add platform information to test step
-            scenario.log("Application started successfully on " + platform.toUpperCase());
-            Allure.step("Application started on " + platform.toUpperCase());
+            scenario.log("Application démarrée avec succès: " + platform.toUpperCase());
+            Allure.step("Application démarrée: " + platform.toUpperCase());
             
-            System.out.println("Driver successfully created for " + platform);
+            System.out.println("Driver créé avec succès: " + platform);
+            
+            // Attendre que l'application soit prête
+            Thread.sleep(2000);
             
         } catch (Exception e) {
-            String errorMsg = String.format("Error during startup on %s: %s", platform, e.getMessage());
+            String errorMsg = String.format("Erreur lors du démarrage (%s): %s", platform, e.getMessage());
             System.err.println(errorMsg);
             e.printStackTrace();
             scenario.log(errorMsg);
@@ -57,29 +63,51 @@ public class Hooks {
         }
     }
 
+    @Given("l'application Les Residences est ouverte")
+    public void verifierApplicationOuverte() {
+        WebDriver driver = Driver.getCurrentDriver();
+        if (driver == null) {
+            throw new RuntimeException("L'application n'est pas démarrée!");
+        }
+        System.out.println("L'application est ouverte et prête pour le test.");
+    }
+
     @After
     public void tearDown(Scenario scenario) {
-        if (scenario.isFailed()) {
+        try {
+            if (scenario.isFailed()) {
+                try {
+                    WebDriver driver = Driver.getCurrentDriver();
+                    if (driver instanceof TakesScreenshot) {
+                        byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+                        String screenshotName = String.format("capture-erreur-%s-%s", platform, scenario.getName());
+                        scenario.attach(screenshot, "image/png", screenshotName);
+                        Allure.addAttachment(screenshotName, "image/png", new String(screenshot));
+                    }
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de la capture d'écran: " + e.getMessage());
+                }
+            }
+            
+            String resultatTest = scenario.isFailed() ? "ÉCHEC" : "RÉUSSITE";
+            System.out.println(String.format("\n=== Scénario Terminé: %s ===", scenario.getName()));
+            System.out.println(String.format("Résultat: %s", resultatTest));
+            
+            scenario.log(String.format("Test terminé - Plateforme: %s, Résultat: %s", platform.toUpperCase(), resultatTest));
+            Allure.step(String.format("Test terminé - Plateforme: %s, Résultat: %s", platform.toUpperCase(), resultatTest));
+        } finally {
+            // Forcer la fermeture de l'application
+            System.out.println("Fermeture forcée de l'application...");
             try {
                 WebDriver driver = Driver.getCurrentDriver();
-                if (driver instanceof TakesScreenshot) {
-                    byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-                    String screenshotName = String.format("error-screenshot-%s-%s", platform, scenario.getName());
-                    scenario.attach(screenshot, "image/png", screenshotName);
-                    
-                    // Add screenshot to Allure report
-                    Allure.addAttachment(screenshotName, "image/png", new String(screenshot));
+                if (driver != null) {
+                    driver.quit();
                 }
             } catch (Exception e) {
-                System.err.println("Error during screenshot capture: " + e.getMessage());
+                System.err.println("Erreur lors de la fermeture du driver: " + e.getMessage());
             }
+            Driver.closeDriver();
+            System.out.println("Application fermée avec succès.\n");
         }
-        
-        // Add final status to reports
-        String testResult = scenario.isFailed() ? "FAILED" : "PASSED";
-        scenario.log(String.format("Test completed on %s - Status: %s", platform.toUpperCase(), testResult));
-        Allure.step(String.format("Test completed on %s with status: %s", platform.toUpperCase(), testResult));
-        
-        Driver.closeDriver();
     }
 }

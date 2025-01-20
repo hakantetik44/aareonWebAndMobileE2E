@@ -22,15 +22,15 @@ public class ResidencePage extends BasePage {
     public void connexion(String email, String password) {
         By emailInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[1]") :
-                AppiumBy.accessibilityId("emailInput");
+                AppiumBy.className("XCUIElementTypeTextField");
         
         By passwordInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[2]") :
-                AppiumBy.accessibilityId("passwordInput");
+                AppiumBy.className("XCUIElementTypeSecureTextField");
         
         By loginButton = OS.isAndroid() ?
                 AppiumBy.xpath("//android.widget.Button[@text='CONNEXION']") :
-                AppiumBy.accessibilityId("loginButton");
+                AppiumBy.xpath("//XCUIElementTypeButton[contains(@name, 'CONNEXION') or contains(@label, 'CONNEXION')]");
 
         System.out.println("Saisie de l'email: " + email);
         WebElement emailField = findElement(emailInput);
@@ -46,6 +46,13 @@ public class ResidencePage extends BasePage {
         passwordField.clear();
         passwordField.sendKeys(password);
         hideKeyboard();
+        
+        // Attendre que le clavier soit complètement fermé
+        try {
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         
         System.out.println("Clic sur le bouton de connexion");
         WebElement button = findElement(loginButton);
@@ -64,12 +71,33 @@ public class ResidencePage extends BasePage {
                         // Try pressing back button if hideKeyboard() fails
                         getCurrentDriver().navigate().back();
                     } catch (Exception e2) {
-                        System.out.println("Impossible de masquer le clavier via back button: " + e2.getMessage());
+                        System.out.println("Impossible de masquer le clavier via le bouton retour: " + e2.getMessage());
                     }
                 }
                 Thread.sleep(500); // Wait after hiding keyboard
             } catch (Exception e) {
                 System.out.println("Impossible de masquer le clavier: " + e.getMessage());
+            }
+        } else {
+            try {
+                // Processus de fermeture du clavier pour iOS
+                Thread.sleep(1000);
+                try {
+                    // Essayer d'abord de cliquer sur le bouton 'Terminé'
+                    By doneButton = AppiumBy.xpath("//XCUIElementTypeButton[@name='Done' or @name='Terminé']");
+                    getCurrentDriver().findElement(doneButton).click();
+                } catch (Exception e1) {
+                    try {
+                        // Si le bouton 'Terminé' n'est pas trouvé, cliquer sur une zone vide
+                        By emptyArea = AppiumBy.xpath("//XCUIElementTypeApplication");
+                        getCurrentDriver().findElement(emptyArea).click();
+                    } catch (Exception e2) {
+                        System.out.println("Impossible de masquer le clavier iOS: " + e2.getMessage());
+                    }
+                }
+                Thread.sleep(500);
+            } catch (Exception e) {
+                System.out.println("Erreur lors de la fermeture du clavier iOS: " + e.getMessage());
             }
         }
     }
@@ -119,8 +147,8 @@ public class ResidencePage extends BasePage {
                     AppiumBy.xpath("//*[contains(@resource-id, 'alert')]")
                 } :
                 new By[]{
-                    AppiumBy.accessibilityId("errorMessage"),
-                    AppiumBy.accessibilityId("alertMessage")
+                    AppiumBy.xpath("//XCUIElementTypeStaticText[contains(@name, 'Identifiant ou mot de passe incorrect')]"),
+                    AppiumBy.xpath("//XCUIElementTypeStaticText[contains(@name, 'erreur')]")
                 };
                 
         WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(10));
@@ -176,53 +204,79 @@ public class ResidencePage extends BasePage {
     public void clickInscription() {
         By inscriptionButton = OS.isAndroid() ?
                 AppiumBy.xpath("//android.widget.Button[@text='INSCRIPTION']") :
-                AppiumBy.accessibilityId("inscriptionButton");
+                AppiumBy.xpath("//XCUIElementTypeButton[contains(@name, 'INSCRIPTION') or contains(@label, 'INSCRIPTION')]");
         getCurrentDriver().findElement(inscriptionButton).click();
     }
 
     public void fillRegistrationForm(Map<String, String> userInfo) {
         By numContratInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[1]") :
-                AppiumBy.accessibilityId("numContratInput");
+                AppiumBy.className("XCUIElementTypeTextField");
                 
         By nomInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[2]") :
-                AppiumBy.accessibilityId("nomInput");
+                AppiumBy.xpath("(//XCUIElementTypeTextField)[2]");
                 
         By prenomInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[3]") :
-                AppiumBy.accessibilityId("prenomInput");
+                AppiumBy.xpath("(//XCUIElementTypeTextField)[3]");
                 
         By emailInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[4]") :
-                AppiumBy.accessibilityId("emailInput");
+                AppiumBy.xpath("(//XCUIElementTypeTextField)[4]");
                 
         By passwordInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[5]") :
-                AppiumBy.accessibilityId("passwordInput");
+                AppiumBy.xpath("(//XCUIElementTypeSecureTextField)[1]");
 
         By confirmPasswordInput = OS.isAndroid() ?
                 AppiumBy.xpath("(//android.widget.EditText)[6]") :
-                AppiumBy.accessibilityId("confirmPasswordInput");
+                AppiumBy.xpath("(//XCUIElementTypeSecureTextField)[2]");
 
-        fillField(numContratInput, "numContrat", userInfo.get("numContrat"));
+        System.out.println("Remplissage du formulaire d'inscription...");
+        fillField(numContratInput, "numéro de contrat", userInfo.get("numContrat"));
         fillField(nomInput, "nom", userInfo.get("nom"));
-        fillField(prenomInput, "prenom", userInfo.get("prenom"));
+        fillField(prenomInput, "prénom", userInfo.get("prenom"));
         fillField(emailInput, "email", userInfo.get("email"));
-        fillField(passwordInput, "password", userInfo.get("password"));
+        fillField(passwordInput, "mot de passe", userInfo.get("password"));
         fillField(confirmPasswordInput, "confirmation du mot de passe", userInfo.get("password"));
+        System.out.println("Formulaire d'inscription rempli.");
     }
 
     private void fillField(By locator, String fieldName, String value) {
         System.out.println("Saisie " + fieldName + ": " + value);
-        WebElement field = findElement(locator);
-        scrollToElement(field);
-        field.click();
+        WebElement field;
+        try {
+            // Essayer d'abord de trouver l'élément
+            field = findElement(locator);
+            field.click();
+        } catch (Exception e) {
+            // Élément non trouvé ou non cliquable, fermer le clavier et réessayer
+            System.out.println("Élément non visible, fermeture du clavier et nouvelle tentative...");
+            hideKeyboard();
+            try {
+                Thread.sleep(1000); // Attendre la fermeture du clavier
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            field = findElement(locator);
+            field.click();
+        }
+
         field.clear();
         field.sendKeys(value);
-        hideKeyboard();
+        
+        // Ne fermer le clavier que si le champ suivant n'est pas visible
         try {
-            Thread.sleep(1000); // Wait longer for animations
+            // Vérifier la visibilité du champ suivant
+            getCurrentDriver().findElement(locator).isDisplayed();
+        } catch (Exception e) {
+            // Si le champ suivant n'est pas visible, fermer le clavier
+            hideKeyboard();
+        }
+        
+        try {
+            Thread.sleep(500); // Courte pause
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -231,12 +285,17 @@ public class ResidencePage extends BasePage {
     private WebElement findElement(By locator) {
         int maxAttempts = 3;
         int attempt = 0;
-        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(15)); // Increased timeout
+        WebDriverWait wait = new WebDriverWait(getCurrentDriver(), Duration.ofSeconds(15));
 
         while (attempt < maxAttempts) {
             try {
                 WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+                // Elementi görünür ve tıklanabilir olana kadar bekle
                 wait.until(ExpectedConditions.elementToBeClickable(element));
+                // Elementin görünür olduğundan emin ol
+                if (!element.isDisplayed()) {
+                    scrollToElement(element);
+                }
                 return element;
             } catch (StaleElementReferenceException e) {
                 attempt++;

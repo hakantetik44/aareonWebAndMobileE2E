@@ -136,6 +136,23 @@ pipeline {
             }
         }
 
+        stage('Start WebDriverAgent') {
+            when {
+                expression { params.PLATFORM.toLowerCase() == 'ios' }
+            }
+            steps {
+                script {
+                    echo "🔧 Démarrage de WebDriverAgent..."
+                    sh '''
+                        cd /usr/local/lib/node_modules/appium-webdriveragent
+                        xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test &
+                        echo "⏳ Attente de 40 secondes pour WebDriverAgent..."
+                        sleep 40
+                    '''
+                }
+            }
+        }
+
         stage('Run Tests') {
             steps {
                 script {
@@ -152,9 +169,6 @@ pipeline {
                         if (platformName == 'ios') {
                             echo "🍎 Running iOS Tests..."
                             sh """
-                                cd /usr/local/lib/node_modules/appium-webdriveragent
-                                xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination id=00008101-000A3DA60CD1003A test &
-                                sleep 10
                                 cd ${WORKSPACE}
                                 mvn clean test -DplatformName=ios
                             """
