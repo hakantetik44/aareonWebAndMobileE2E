@@ -74,30 +74,40 @@ public class Hooks {
 
     @After
     public void tearDown(Scenario scenario) {
-        if (scenario.isFailed()) {
+        try {
+            if (scenario.isFailed()) {
+                try {
+                    WebDriver driver = Driver.getCurrentDriver();
+                    if (driver instanceof TakesScreenshot) {
+                        byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+                        String screenshotName = String.format("capture-erreur-%s-%s", platform, scenario.getName());
+                        scenario.attach(screenshot, "image/png", screenshotName);
+                        Allure.addAttachment(screenshotName, "image/png", new String(screenshot));
+                    }
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de la capture d'écran: " + e.getMessage());
+                }
+            }
+            
+            String resultatTest = scenario.isFailed() ? "ÉCHEC" : "RÉUSSITE";
+            System.out.println(String.format("\n=== Scénario Terminé: %s ===", scenario.getName()));
+            System.out.println(String.format("Résultat: %s", resultatTest));
+            
+            scenario.log(String.format("Test terminé - Plateforme: %s, Résultat: %s", platform.toUpperCase(), resultatTest));
+            Allure.step(String.format("Test terminé - Plateforme: %s, Résultat: %s", platform.toUpperCase(), resultatTest));
+        } finally {
+            // Forcer la fermeture de l'application
+            System.out.println("Fermeture forcée de l'application...");
             try {
                 WebDriver driver = Driver.getCurrentDriver();
-                if (driver instanceof TakesScreenshot) {
-                    byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-                    String screenshotName = String.format("capture-erreur-%s-%s", platform, scenario.getName());
-                    scenario.attach(screenshot, "image/png", screenshotName);
-                    Allure.addAttachment(screenshotName, "image/png", new String(screenshot));
+                if (driver != null) {
+                    driver.quit();
                 }
             } catch (Exception e) {
-                System.err.println("Erreur lors de la capture d'écran: " + e.getMessage());
+                System.err.println("Erreur lors de la fermeture du driver: " + e.getMessage());
             }
+            Driver.closeDriver();
+            System.out.println("Application fermée avec succès.\n");
         }
-        
-        String resultatTest = scenario.isFailed() ? "ÉCHEC" : "RÉUSSITE";
-        System.out.println(String.format("\n=== Scénario Terminé: %s ===", scenario.getName()));
-        System.out.println(String.format("Résultat: %s", resultatTest));
-        
-        scenario.log(String.format("Test terminé - Plateforme: %s, Résultat: %s", platform.toUpperCase(), resultatTest));
-        Allure.step(String.format("Test terminé - Plateforme: %s, Résultat: %s", platform.toUpperCase(), resultatTest));
-        
-        // Fermer l'application à la fin du scénario
-        System.out.println("Fermeture de l'application pour ce scénario...");
-        Driver.closeDriver();
-        System.out.println("Application fermée.\n");
     }
 }
