@@ -20,12 +20,17 @@ public class Hooks {
         this.scenario = scenario;
         this.platform = System.getProperty("platformName", ConfigReader.getProperty("platformName", "android")).toLowerCase();
         
+        // Ajouter le nom de la plateforme au titre du scénario
+        String platformName = platform.substring(0, 1).toUpperCase() + platform.substring(1);
+        String originalName = scenario.getName();
+        String newName = originalName + " - " + platformName;
+        
         // Ajouter des informations sur la plateforme
         scenario.log("Plateforme de test: " + platform.toUpperCase());
         Allure.label("platform", platform);
-        Allure.description("Plateforme de test: " + platform.toUpperCase() + "\n" + scenario.getName());
+        Allure.description("Plateforme de test: " + platform.toUpperCase() + "\n" + newName);
         
-        System.out.println("\n=== Nouveau Scénario Commence: " + scenario.getName() + " ===");
+        System.out.println("\n=== Nouveau Scénario Commence: " + newName + " ===");
         System.out.println("Plateforme: " + platform);
         
         // Démarrer l'application pour ce scénario

@@ -13,13 +13,12 @@ public class Driver {
     private Driver() {
     }
 
-    public static AppiumDriver Android;
-    public static AppiumDriver iOS;
-    public static WebDriver Web;
+    private static AppiumDriver Android;
+    private static AppiumDriver iOS;
+    private static WebDriver Web;
 
     public static WebDriver getCurrentDriver() {
         String platform = System.getProperty("platformName", "android").toLowerCase();
-        System.out.println("Getting driver for platform: " + platform);
         
         switch (platform) {
             case "android":
@@ -36,7 +35,6 @@ public class Driver {
     public static WebDriver getWebDriver() {
         if (Web == null) {
             try {
-                System.out.println("Starting Web driver...");
                 ChromeOptions options = new ChromeOptions();
                 options.addArguments("--start-maximized");
                 options.addArguments("--remote-allow-origins=*");
@@ -44,7 +42,7 @@ public class Driver {
                 Web = new ChromeDriver(options);
                 Web.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
                 Web.manage().window().maximize();
-                System.out.println("Web driver created successfully!");
+                System.out.println("Web driver créé avec succès!");
             } catch (Exception e) {
                 System.err.println("Error creating Web driver: " + e.getMessage());
                 e.printStackTrace();
@@ -56,8 +54,6 @@ public class Driver {
     public static AppiumDriver getAndroidDriver() {
         if (Android == null) {
             try {
-                System.out.println("Starting Android driver...");
-                
                 UiAutomator2Options options = new UiAutomator2Options();
                 options.setPlatformName("ANDROID");
                 options.setAutomationName(ConfigReader.getProperty("androidAutomationName"));
@@ -69,11 +65,9 @@ public class Driver {
                 options.setNewCommandTimeout(Duration.ofSeconds(60));
                 options.setAdbExecTimeout(Duration.ofSeconds(60));
 
-                System.out.println("Connecting to Appium...");
                 Android = new AppiumDriver(new URL(ConfigReader.getProperty("appiumServerURL")), options);
                 Android.manage().timeouts().implicitlyWait(Duration.ofSeconds(15));
-                System.out.println("Android driver created successfully!");
-
+                System.out.println("Android driver créé avec succès!");
             } catch (Exception e) {
                 System.err.println("Error creating Android driver: " + e.getMessage());
                 e.printStackTrace();
